@@ -1798,50 +1798,57 @@ async function loadPairData() {
 /* ═══════════════════════════════════════════
    PORTFOLIO – TOKYOITE INVESTMENT CLUB
 ═══════════════════════════════════════════ */
-const PORTFOLIO_TICKERS = [
-  "SMTO3","IGTI3","AURE3","SUZB3","ITUB3",
-  "BERK34","MSFT34","BBSE3","F1IS34","SLCE3"
+const PORTFOLIO = [
+  { ticker: "SMTO3",  sym: "SMTO3.SA"  },
+  { ticker: "IGTI3",  sym: "IGTI3.SA"  },
+  { ticker: "AURE3",  sym: "AURE3.SA"  },
+  { ticker: "SUZB3",  sym: "SUZB3.SA"  },
+  { ticker: "ITUB3",  sym: "ITUB3.SA"  },
+  { ticker: "BERK34", sym: "BERK34.SA" },
+  { ticker: "MSFT34", sym: "MSFT34.SA" },
+  { ticker: "BBSE3",  sym: "BBSE3.SA"  },
+  { ticker: "F1IS34", sym: "F1IS34.SA" },
+  { ticker: "SLCE3",  sym: "SLCE3.SA"  },
 ];
 
-async function fetchPortfolio() {
-  const symbols = PORTFOLIO_TICKERS.join(",");
-  const resp = await fetch(`https://brapi.dev/api/quote/${symbols}`);
-  if (!resp.ok) throw new Error(`brapi ${resp.status}`);
-  return resp.json();
-}
-
-function renderPortfolio(data) {
-  const grid = document.getElementById("portfolio-grid");
-  if (!data || !data.results || data.results.length === 0) {
-    grid.innerHTML = '<span class="port-loading">Dados indisponíveis</span>';
-    return;
-  }
-  grid.innerHTML = data.results.map(s => {
-    const chg  = s.regularMarketChangePercent ?? 0;
-    const dir  = chg >= 0 ? "up" : "down";
-    const cls  = chg >= 0 ? "pos" : "neg";
-    const sign = chg >= 0 ? "+" : "";
-    const price = (s.regularMarketPrice ?? 0)
-      .toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const name = s.shortName || s.longName || s.symbol;
-    return `
-      <div class="port-card ${dir}">
-        <div class="port-ticker">${s.symbol}</div>
-        <div class="port-name" title="${name}">${name}</div>
-        <div class="port-price">R$ ${price}</div>
-        <div class="port-change ${cls}">${sign}${chg.toFixed(2)}%</div>
-      </div>`;
-  }).join("");
+async function fetchStock(sym) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=5d`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const json = await resp.json();
+  const m = json.chart?.result?.[0]?.meta;
+  if (!m) return null;
+  const price = m.regularMarketPrice ?? 0;
+  const prev  = m.chartPreviousClose ?? m.previousClose ?? price;
+  const chgPct = prev !== 0 ? ((price - prev) / prev) * 100 : 0;
+  return { price, chgPct, name: m.shortName || m.longName || sym };
 }
 
 async function loadPortfolio() {
+  const grid = document.getElementById("portfolio-grid");
   try {
-    const data = await fetchPortfolio();
-    renderPortfolio(data);
+    const results = await Promise.allSettled(PORTFOLIO.map(p => fetchStock(p.sym)));
+    grid.innerHTML = PORTFOLIO.map((p, i) => {
+      const r = results[i];
+      if (r.status !== "fulfilled" || !r.value) {
+        return `<div class="port-card"><div class="port-ticker">${p.ticker}</div><div class="port-change" style="color:var(--text-dim)">—</div></div>`;
+      }
+      const { price, chgPct, name } = r.value;
+      const dir  = chgPct >= 0 ? "up" : "down";
+      const cls  = chgPct >= 0 ? "pos" : "neg";
+      const sign = chgPct >= 0 ? "+" : "";
+      const priceStr = price.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return `
+        <div class="port-card ${dir}">
+          <div class="port-ticker">${p.ticker}</div>
+          <div class="port-name" title="${name}">${name}</div>
+          <div class="port-price">R$ ${priceStr}</div>
+          <div class="port-change ${cls}">${sign}${chgPct.toFixed(2)}%</div>
+        </div>`;
+    }).join("");
   } catch (e) {
     console.error("Portfolio fetch error:", e);
-    document.getElementById("portfolio-grid").innerHTML =
-      '<span class="port-loading">Erro ao carregar cotações</span>';
+    grid.innerHTML = '<span class="port-loading">Erro ao carregar cotações</span>';
   }
 }
 
