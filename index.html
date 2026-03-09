@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FX Trading Dashboard</title>
-<script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+<title>Tokyoite Capital – Portal</title>
 <style>
   :root {
     --bg: #0e1117;
@@ -14,11 +13,9 @@
     --green: #00c853;
     --red: #ff1744;
     --yellow: #f9a825;
-    --purple: #ab47bc;
     --text: #e0e0e0;
     --text-dim: #8892a4;
     --border: #2a2d3e;
-    --sidebar-width: 260px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,1779 +25,310 @@
     color: var(--text);
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     font-size: 14px;
-    display: flex;
     min-height: 100vh;
-    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
-  /* ── Scrollbar ─────────────────────────────────────────── */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-  /* ── Sidebar ────────────────────────────────────────────── */
-  #sidebar {
-    width: var(--sidebar-width);
-    min-width: var(--sidebar-width);
+  /* ── Top bar ──────────────────────────────── */
+  #top-bar {
     background: var(--bg2);
-    border-right: 1px solid var(--border);
-    height: 100vh;
-    position: sticky;
-    top: 0;
-    overflow-y: auto;
+    border-bottom: 1px solid var(--border);
+    padding: 18px 48px;
     display: flex;
-    flex-direction: column;
-    padding: 16px 14px;
+    align-items: center;
     gap: 18px;
-    z-index: 100;
   }
+  #top-bar img { height: 48px; width: auto; display: block; }
+  #top-bar-text h1 { font-size: 22px; font-weight: 700; color: var(--text); }
+  #top-bar-text p { font-size: 13px; color: var(--text-dim); margin-top: 3px; }
 
-  #sidebar-logo {
-    padding: 4px 0 8px;
-    border-bottom: 1px solid var(--border);
-  }
-  #sidebar-logo img { width: 100%; height: auto; display: block; }
-
-  #header-logo { margin-bottom: 4px; }
-  #header-logo img { height: 40px; width: auto; display: block; }
-
-  #sidebar h2 {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .sb-section { display: flex; flex-direction: column; gap: 10px; }
-
-  .sb-label {
-    font-size: 11px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 4px;
-  }
-
-  /* Pair selector buttons */
-  #pair-buttons {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 5px;
-  }
-
-  .pair-btn {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 6px 4px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 11px;
-    font-weight: 600;
-    font-family: 'Courier New', monospace;
-    text-align: center;
-    transition: all 0.15s;
-  }
-  .pair-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .pair-btn.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #000;
-  }
-
-  /* Timeframe buttons */
-  #tf-buttons {
-    display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
-  }
-
-  .tf-btn {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 11px;
-    font-weight: 600;
-    transition: all 0.15s;
-  }
-  .tf-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .tf-btn.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #000;
-  }
-
-  /* Sliders */
-  .slider-row {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .slider-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .slider-val {
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    color: var(--accent);
-    font-weight: 700;
-  }
-
-  input[type=range] {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 4px;
-    background: var(--bg3);
-    border-radius: 2px;
-    outline: none;
-    cursor: pointer;
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-    border: 2px solid var(--bg);
-  }
-  input[type=range]::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-    border: 2px solid var(--bg);
-  }
-
-  /* Toggle switch */
-  .toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 2px 0;
-  }
-  .toggle-label {
-    font-size: 12px;
-    color: var(--text);
-  }
-  .toggle {
-    position: relative;
-    display: inline-block;
-    width: 36px;
-    height: 20px;
-  }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .toggle-slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    transition: 0.2s;
-  }
-  .toggle-slider:before {
-    position: absolute;
-    content: "";
-    height: 14px;
-    width: 14px;
-    left: 2px;
-    bottom: 2px;
-    background: var(--text-dim);
-    border-radius: 50%;
-    transition: 0.2s;
-  }
-  .toggle input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent); }
-  .toggle input:checked + .toggle-slider:before {
-    transform: translateX(16px);
-    background: #000;
-  }
-
-  /* Refresh button */
-  #refresh-btn {
-    background: linear-gradient(135deg, var(--accent), #0288d1);
-    border: none;
-    color: #000;
-    padding: 8px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 12px;
-    width: 100%;
-    transition: opacity 0.15s;
-    letter-spacing: 0.03em;
-  }
-  #refresh-btn:hover { opacity: 0.85; }
-  #refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .sb-caption {
-    font-size: 10px;
-    color: var(--text-dim);
-    line-height: 1.5;
-  }
-
-  /* ── Main content ───────────────────────────────────────── */
-  #main {
+  /* ── Main ─────────────────────────────────── */
+  #portal-main {
     flex: 1;
+    padding: 40px 48px;
     display: flex;
     flex-direction: column;
-    padding: 20px 24px;
-    gap: 20px;
-    min-width: 0;
-    overflow-x: hidden;
+    gap: 44px;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
   }
 
-  /* Header */
-  #header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
+  /* ── Section heading ─────────────────────── */
+  .section-heading {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding-bottom: 12px;
     border-bottom: 1px solid var(--border);
-    padding-bottom: 14px;
-  }
-  #header h1 {
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-  }
-  #last-update {
-    font-size: 11px;
-    color: var(--text-dim);
-    font-family: 'Courier New', monospace;
+    margin-bottom: 18px;
   }
 
-  /* Sessions */
-  #sessions-row {
+  /* ── Feature cards ───────────────────────── */
+  #feature-cards {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 20px;
   }
 
-  .session-card {
+  .feature-card {
     background: var(--bg2);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 16px;
+    border-radius: 12px;
+    padding: 28px 26px;
+    text-decoration: none;
+    color: inherit;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 12px;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
   }
-  .session-card.active {
-    border-color: var(--green);
-    background: rgba(0,200,83,0.06);
+  .feature-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(41,182,246,0.1);
   }
-  .session-indicator {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--text-dim);
-    flex-shrink: 0;
+  .feature-icon { font-size: 36px; line-height: 1; }
+  .feature-title { font-size: 18px; font-weight: 700; color: var(--text); }
+  .feature-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
   }
-  .session-card.active .session-indicator {
-    background: var(--green);
-    box-shadow: 0 0 8px var(--green);
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    0%,100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
-  .session-info { display: flex; flex-direction: column; gap: 2px; }
-  .session-name { font-weight: 700; font-size: 13px; }
-  .session-hours { font-size: 10px; color: var(--text-dim); }
-  .session-status {
-    margin-left: auto;
+  .tag {
     font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    font-weight: 600;
     color: var(--text-dim);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
-  .session-card.active .session-status { color: var(--green); }
+  .feature-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    flex: 1;
+  }
+  .feature-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 4px;
+  }
 
-  /* Live price grid */
-  #price-grid {
+  /* ── Portfolio ───────────────────────────── */
+  #portfolio-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
     gap: 10px;
   }
 
-  .price-card {
+  .port-card {
     background: var(--bg2);
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 12px 14px;
-    cursor: pointer;
-    transition: all 0.15s;
     position: relative;
     overflow: hidden;
+    transition: border-color 0.15s;
   }
-  .price-card::before {
+  .port-card:hover { border-color: var(--accent); }
+  .port-card::before {
     content: '';
     position: absolute;
     left: 0; top: 0; bottom: 0;
     width: 3px;
-    background: transparent;
-    transition: background 0.15s;
+    background: var(--border);
   }
-  .price-card:hover { border-color: var(--accent); }
-  .price-card.selected {
-    border-color: var(--accent);
-    background: rgba(41,182,246,0.07);
-  }
-  .price-card.selected::before { background: var(--accent); }
+  .port-card.up::before   { background: var(--green); }
+  .port-card.down::before { background: var(--red); }
 
-  .pc-pair {
+  .port-ticker {
     font-size: 11px;
     font-weight: 700;
-    color: var(--text-dim);
+    color: var(--accent);
     letter-spacing: 0.06em;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
-  .pc-price {
+  .port-name {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .port-price {
     font-family: 'Courier New', monospace;
     font-size: 16px;
     font-weight: 700;
     color: var(--text);
     margin-bottom: 3px;
   }
-  .pc-change {
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-  }
+  .port-change { font-family: 'Courier New', monospace; font-size: 11px; }
   .pos { color: var(--green); }
   .neg { color: var(--red); }
+  .port-loading { color: var(--text-dim); font-size: 12px; padding: 8px 0; display: block; }
 
-  /* Chart */
-  #chart-container {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 8px;
-    position: relative;
-  }
-  #chart-loading {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(14,17,23,0.75);
-    border-radius: 8px;
-    z-index: 10;
-    font-size: 13px;
-    color: var(--text-dim);
-    gap: 10px;
-  }
-  .spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  #plotly-chart { width: 100%; min-height: 580px; }
-
-  /* Analytics */
-  #analytics {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 16px;
-  }
-
-  .analytics-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px;
-  }
-  .analytics-card h3 {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 14px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .stat-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 5px 0;
-    border-bottom: 1px solid rgba(42,45,62,0.5);
-  }
-  .stat-row:last-child { border-bottom: none; }
-  .stat-name { color: var(--text-dim); font-size: 12px; }
-  .stat-val {
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text);
-  }
-  .badge {
-    font-size: 10px;
-    padding: 2px 7px;
-    border-radius: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .badge-green { background: rgba(0,200,83,0.15); color: var(--green); }
-  .badge-red { background: rgba(255,23,68,0.15); color: var(--red); }
-  .badge-yellow { background: rgba(249,168,37,0.15); color: var(--yellow); }
-  .badge-grey { background: rgba(136,146,164,0.15); color: var(--text-dim); }
-
-  #corr-chart { width: 100%; }
-
-  /* Pip calculator */
-  #pip-calc {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px;
-  }
-  #pip-calc h3 {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 14px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .pip-inputs {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    margin-bottom: 16px;
-  }
-
-  .input-group { display: flex; flex-direction: column; gap: 5px; }
-  .input-group label {
-    font-size: 11px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .input-group input {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 8px 10px;
-    border-radius: 5px;
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    outline: none;
-    transition: border-color 0.15s;
-    width: 100%;
-  }
-  .input-group input:focus { border-color: var(--accent); }
-
-  .pip-results {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-  }
-
-  .pip-result-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 12px 14px;
-  }
-  .pip-result-label {
-    font-size: 11px;
-    color: var(--text-dim);
-    margin-bottom: 5px;
-  }
-  .pip-result-val {
-    font-family: 'Courier New', monospace;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--accent);
-  }
-
-  /* Footer */
+  /* ── Footer ──────────────────────────────── */
   #footer {
-    text-align: center;
-    padding: 16px;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 16px 48px;
     font-size: 11px;
     color: var(--text-dim);
-    border-top: 1px solid var(--border);
-    margin-top: 4px;
+    text-align: center;
   }
 
-  /* Error */
-  .error-msg {
-    color: var(--red);
-    font-size: 12px;
-    padding: 8px;
-    background: rgba(255,23,68,0.08);
-    border: 1px solid rgba(255,23,68,0.2);
-    border-radius: 5px;
+  /* ── Responsive ──────────────────────────── */
+  @media (max-width: 640px) {
+    #top-bar, #portal-main, #footer { padding-left: 20px; padding-right: 20px; }
   }
 </style>
 </head>
 <body>
 
-<!-- ════════════════════════════════════════════
-     SIDEBAR
-═════════════════════════════════════════════ -->
-<div id="sidebar">
-  <div id="sidebar-logo">
-    <img src="New_tokyoite_logo_20250719.png" alt="Tokyoite" />
-  </div>
-  <h2>⚙ Controls</h2>
-
-  <div class="sb-section">
-    <div class="sb-label">Currency Pair</div>
-    <div id="pair-buttons"></div>
-  </div>
-
-  <div class="sb-section">
-    <div class="sb-label">Timeframe</div>
-    <div id="tf-buttons"></div>
-  </div>
-
-  <div class="sb-section">
-    <div class="sb-label">EMA Settings</div>
-    <div class="slider-row">
-      <div class="slider-header">
-        <span style="font-size:12px;color:var(--text)">Fast EMA</span>
-        <span class="slider-val" id="ema-fast-val">9</span>
-      </div>
-      <input type="range" id="ema-fast" min="5" max="50" value="9">
-    </div>
-    <div class="slider-row">
-      <div class="slider-header">
-        <span style="font-size:12px;color:var(--text)">Slow EMA</span>
-        <span class="slider-val" id="ema-slow-val">21</span>
-      </div>
-      <input type="range" id="ema-slow" min="10" max="200" value="21">
-    </div>
-  </div>
-
-  <div class="sb-section">
-    <div class="sb-label">RSI Settings</div>
-    <div class="slider-row">
-      <div class="slider-header">
-        <span style="font-size:12px;color:var(--text)">RSI Period</span>
-        <span class="slider-val" id="rsi-period-val">14</span>
-      </div>
-      <input type="range" id="rsi-period" min="7" max="21" value="14">
-    </div>
-  </div>
-
-  <div class="sb-section">
-    <div class="sb-label">Overlays</div>
-    <div class="toggle-row">
-      <span class="toggle-label">Bollinger Bands</span>
-      <label class="toggle">
-        <input type="checkbox" id="show-bb" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div class="toggle-row">
-      <span class="toggle-label">EMAs</span>
-      <label class="toggle">
-        <input type="checkbox" id="show-ema" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-  </div>
-
-  <button id="refresh-btn">↺ Refresh Data</button>
-
-  <div class="sb-caption">
-    Auto-refreshes every 60s.<br>
-    History: Frankfurter API.<br>
-    Rates: open.er-api.com.
+<!-- ── Top bar ──────────────────────────────── -->
+<div id="top-bar">
+  <img src="New_tokyoite_logo_20250719.png" alt="Tokyoite Capital" />
+  <div id="top-bar-text">
+    <h1>Tokyoite Capital</h1>
+    <p>Investment Intelligence Platform</p>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════
-     MAIN CONTENT
-═════════════════════════════════════════════ -->
-<div id="main">
+<!-- ── Main portal ──────────────────────────── -->
+<div id="portal-main">
 
-  <!-- Header -->
-  <div id="header">
-    <div id="header-logo">
-      <img src="New_tokyoite_logo_20250719.png" alt="Tokyoite" />
-    </div>
-    <h1>💱 FX Trading Dashboard</h1>
-    <div id="last-update">Last update: —</div>
-  </div>
+  <!-- Dashboards -->
+  <div>
+    <div class="section-heading">Dashboards</div>
+    <div id="feature-cards">
 
-  <!-- Sessions -->
-  <div id="sessions-row">
-    <div class="session-card" id="sess-tokyo">
-      <div class="session-indicator"></div>
-      <div class="session-info">
-        <div class="session-name">Tokyo</div>
-        <div class="session-hours">00:00 – 09:00 UTC</div>
-      </div>
-      <div class="session-status">Closed</div>
-    </div>
-    <div class="session-card" id="sess-london">
-      <div class="session-indicator"></div>
-      <div class="session-info">
-        <div class="session-name">London</div>
-        <div class="session-hours">08:00 – 17:00 UTC</div>
-      </div>
-      <div class="session-status">Closed</div>
-    </div>
-    <div class="session-card" id="sess-newyork">
-      <div class="session-indicator"></div>
-      <div class="session-info">
-        <div class="session-name">New York</div>
-        <div class="session-hours">13:00 – 22:00 UTC</div>
-      </div>
-      <div class="session-status">Closed</div>
-    </div>
-  </div>
+      <a class="feature-card" href="fx.html">
+        <div class="feature-icon">💱</div>
+        <div class="feature-title">FX Trading Dashboard</div>
+        <div class="feature-tags">
+          <span class="tag">Live Rates</span>
+          <span class="tag">Charts</span>
+          <span class="tag">Technicals</span>
+          <span class="tag">Correlation</span>
+        </div>
+        <div class="feature-desc">
+          Live exchange rates for 8 major FX pairs. Interactive candlestick charts with RSI, MACD, Bollinger Bands and EMAs. Pair correlation matrix and pip calculator.
+        </div>
+        <div class="feature-link">Open Dashboard →</div>
+      </a>
 
-  <!-- Live price grid -->
-  <div id="price-grid"></div>
+      <a class="feature-card" href="commodities.html">
+        <div class="feature-icon">🌾</div>
+        <div class="feature-title">Commodities Dashboard</div>
+        <div class="feature-tags">
+          <span class="tag">Energy</span>
+          <span class="tag">Metals</span>
+          <span class="tag">Softs</span>
+          <span class="tag">Grains</span>
+        </div>
+        <div class="feature-desc">
+          Live futures prices for 17 global commodities — WTI, Brent, Gold, Silver, Copper, Coffee, Cocoa, Soybeans and more. Candlestick charts with RSI for each commodity.
+        </div>
+        <div class="feature-link">Open Dashboard →</div>
+      </a>
 
-  <!-- Main chart -->
-  <div id="chart-container">
-    <div id="chart-loading">
-      <div class="spinner"></div>
-      Loading chart data…
-    </div>
-    <div id="plotly-chart"></div>
-  </div>
+      <a class="feature-card" href="cartas.html">
+        <div class="feature-icon">📄</div>
+        <div class="feature-title">Cartas aos Cotistas</div>
+        <div class="feature-tags">
+          <span class="tag">2024</span>
+          <span class="tag">2025</span>
+          <span class="tag">2026</span>
+          <span class="tag">15 Cartas</span>
+        </div>
+        <div class="feature-desc">
+          Todas as cartas periódicas publicadas pela Tokyoite Capital aos investidores, desde agosto de 2024. Disponíveis para leitura e download em PDF.
+        </div>
+        <div class="feature-link">Ver Cartas →</div>
+      </a>
 
-  <!-- Analytics -->
-  <div id="analytics">
-    <!-- Price stats -->
-    <div class="analytics-card" id="price-stats-card">
-      <h3>Price Statistics</h3>
-      <div id="price-stats-content">
-        <div class="stat-row"><span class="stat-name">Last Price</span><span class="stat-val" id="stat-last">—</span></div>
-        <div class="stat-row"><span class="stat-name">Daily Change</span><span class="stat-val" id="stat-change">—</span></div>
-        <div class="stat-row"><span class="stat-name">Period High</span><span class="stat-val" id="stat-high">—</span></div>
-        <div class="stat-row"><span class="stat-name">Period Low</span><span class="stat-val" id="stat-low">—</span></div>
-        <div class="stat-row"><span class="stat-name">ATR (14)</span><span class="stat-val" id="stat-atr">—</span></div>
-      </div>
-    </div>
-
-    <!-- Technical readings -->
-    <div class="analytics-card" id="tech-card">
-      <h3>Technical Readings</h3>
-      <div id="tech-content">
-        <div class="stat-row"><span class="stat-name">RSI</span><span class="stat-val" id="stat-rsi">—</span></div>
-        <div class="stat-row"><span class="stat-name">EMA Trend</span><span class="stat-val" id="stat-ema-trend">—</span></div>
-        <div class="stat-row"><span class="stat-name">MACD Signal</span><span class="stat-val" id="stat-macd-sig">—</span></div>
-        <div class="stat-row"><span class="stat-name">BB Width %</span><span class="stat-val" id="stat-bb-width">—</span></div>
-        <div class="stat-row"><span class="stat-name">Ann. Volatility</span><span class="stat-val" id="stat-vol">—</span></div>
-      </div>
-    </div>
-
-    <!-- Correlation matrix -->
-    <div class="analytics-card" id="corr-card">
-      <h3>Pair Correlation Matrix (30d)</h3>
-      <div id="corr-chart"></div>
     </div>
   </div>
 
-  <!-- Pip Calculator -->
-  <div id="pip-calc">
-    <h3>Pip Calculator</h3>
-    <div class="pip-inputs">
-      <div class="input-group">
-        <label>Lot Size</label>
-        <input type="number" id="pip-lot" value="1" min="0.01" step="0.01">
-      </div>
-      <div class="input-group">
-        <label>Stop Loss (pips)</label>
-        <input type="number" id="pip-stop" value="20" min="1" step="1">
-      </div>
-      <div class="input-group">
-        <label>Account Equity ($)</label>
-        <input type="number" id="pip-equity" value="10000" min="100" step="100">
-      </div>
-      <div class="input-group">
-        <label>Risk %</label>
-        <input type="number" id="pip-risk" value="1" min="0.1" max="100" step="0.1">
-      </div>
-    </div>
-    <div class="pip-results">
-      <div class="pip-result-card">
-        <div class="pip-result-label">Pip Value (per lot)</div>
-        <div class="pip-result-val" id="pip-val">—</div>
-      </div>
-      <div class="pip-result-card">
-        <div class="pip-result-label">Risk on Trade ($)</div>
-        <div class="pip-result-val" id="pip-risk-trade">—</div>
-      </div>
-      <div class="pip-result-card">
-        <div class="pip-result-label">Max Lot Size</div>
-        <div class="pip-result-val" id="pip-max-lot">—</div>
-      </div>
+  <!-- Portfolio -->
+  <div>
+    <div class="section-heading">Portfolio – Tokyoite Investment Club</div>
+    <div id="portfolio-grid">
+      <span class="port-loading">Carregando cotações…</span>
     </div>
   </div>
 
-  <!-- Footer -->
-  <div id="footer">
-    For educational purposes only &middot; Not financial advice &middot; Data: open.er-api.com &amp; frankfurter.app
-  </div>
+</div>
 
-</div><!-- end #main -->
+<!-- ── Footer ───────────────────────────────── -->
+<div id="footer">
+  Tokyoite Capital &middot; For educational purposes only &middot; Not financial advice &middot; Portfolio data: brapi.dev
+</div>
 
 <script>
 'use strict';
 
-/* ═══════════════════════════════════════════
-   CONFIG
-═══════════════════════════════════════════ */
-const PAIRS = {
-  "EUR/USD": ["USD", "EUR"],
-  "GBP/USD": ["USD", "GBP"],
-  "USD/JPY": ["USD", "JPY"],
-  "AUD/USD": ["USD", "AUD"],
-  "USD/CAD": ["USD", "CAD"],
-  "USD/CHF": ["USD", "CHF"],
-  "NZD/USD": ["USD", "NZD"],
-  "EUR/GBP": ["EUR", "GBP"],
-};
-const USD_QUOTE = new Set(["EUR/USD","GBP/USD","AUD/USD","NZD/USD"]);
-const TIMEFRAMES = { "1W":7, "1M":30, "3M":90, "6M":180, "1Y":365 };
-
-const SESSIONS = [
-  { id: "sess-tokyo",   name: "Tokyo",    start: 0,  end: 9  },
-  { id: "sess-london",  name: "London",   start: 8,  end: 17 },
-  { id: "sess-newyork", name: "New York", start: 13, end: 22 },
+const PORTFOLIO_TICKERS = [
+  "SMTO3","IGTI3","AURE3","SUZB3","ITUB3",
+  "BERK34","MSFT34","BBSE3","F1IS34","SLCE3"
 ];
 
-/* ═══════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════ */
-const state = {
-  selectedPair: "EUR/USD",
-  selectedTF: "1M",
-  emaFast: 9,
-  emaSlow: 21,
-  rsiPeriod: 14,
-  showBB: true,
-  showEMA: true,
-  liveRates: null,         // { rates: {EUR:0.92,...} }
-  livePrices: {},          // { "EUR/USD": 1.083, ... }
-  liveOpenPrices: {},      // yesterday open prices approximated from rates
-  historyData: null,       // current pair history
-  corrData: null,          // 30d all-pair history for correlation
-  corrChartRendered: false,
-  lastUpdateTs: null,
-};
-
-// Cache: { "EUR:USD:30": {dates,closes,...} }
-const histCache = {};
-// Correlation cache (all 8 pairs 30d)
-let corrCache = null;
-
-/* ═══════════════════════════════════════════
-   PRNG — mulberry32 (seed=42)
-═══════════════════════════════════════════ */
-function makePRNG(seed) {
-  let s = seed;
-  return function() {
-    s = (s + 0x6D2B79F5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/* ═══════════════════════════════════════════
-   DATE UTILS
-═══════════════════════════════════════════ */
-function toISODate(d) {
-  return d.toISOString().slice(0,10);
-}
-function todayUTC() {
-  return new Date(Date.UTC(
-    new Date().getUTCFullYear(),
-    new Date().getUTCMonth(),
-    new Date().getUTCDate()
-  ));
-}
-function addDays(d, n) {
-  const r = new Date(d);
-  r.setUTCDate(r.getUTCDate() + n);
-  return r;
-}
-
-/* ═══════════════════════════════════════════
-   INDICATORS
-═══════════════════════════════════════════ */
-function ema(arr, n) {
-  if (!arr || arr.length === 0) return [];
-  const k = 2 / (n + 1);
-  const out = new Array(arr.length).fill(NaN);
-  // Find first valid value
-  let start = 0;
-  while (start < arr.length && (arr[start] === null || isNaN(arr[start]))) start++;
-  if (start >= arr.length) return out;
-  out[start] = arr[start];
-  for (let i = start + 1; i < arr.length; i++) {
-    if (arr[i] === null || isNaN(arr[i])) {
-      out[i] = out[i-1];
-    } else {
-      out[i] = arr[i] * k + out[i-1] * (1 - k);
-    }
-  }
-  return out;
-}
-
-function computeRSI(close, period = 14) {
-  const n = close.length;
-  const rsi = new Array(n).fill(NaN);
-  if (n < period + 1) return rsi;
-
-  let avgGain = 0, avgLoss = 0;
-  for (let i = 1; i <= period; i++) {
-    const d = close[i] - close[i-1];
-    if (d >= 0) avgGain += d; else avgLoss += Math.abs(d);
-  }
-  avgGain /= period;
-  avgLoss /= period;
-
-  const rs0 = avgLoss === 0 ? Infinity : avgGain / avgLoss;
-  rsi[period] = avgLoss === 0 ? 100 : 100 - 100 / (1 + rs0);
-
-  for (let i = period + 1; i < n; i++) {
-    const d = close[i] - close[i-1];
-    const gain = d > 0 ? d : 0;
-    const loss = d < 0 ? -d : 0;
-    avgGain = (avgGain * (period - 1) + gain) / period;
-    avgLoss = (avgLoss * (period - 1) + loss) / period;
-    const rs = avgLoss === 0 ? Infinity : avgGain / avgLoss;
-    rsi[i] = avgLoss === 0 ? 100 : 100 - 100 / (1 + rs);
-  }
-  return rsi;
-}
-
-function computeMACD(close, fast = 12, slow = 26, signal = 9) {
-  const emaFast = ema(close, fast);
-  const emaSlow = ema(close, slow);
-  const macdLine = emaFast.map((v, i) => (isNaN(v) || isNaN(emaSlow[i])) ? NaN : v - emaSlow[i]);
-  const signalLine = ema(macdLine.map(v => isNaN(v) ? null : v), signal);
-  const hist = macdLine.map((v, i) => (isNaN(v) || isNaN(signalLine[i])) ? NaN : v - signalLine[i]);
-  return { macdLine, signalLine, hist };
-}
-
-function computeBBands(close, period = 20, std = 2) {
-  const n = close.length;
-  const upper = new Array(n).fill(NaN);
-  const mid   = new Array(n).fill(NaN);
-  const lower = new Array(n).fill(NaN);
-  for (let i = period - 1; i < n; i++) {
-    const slice = close.slice(i - period + 1, i + 1);
-    const m = slice.reduce((a, b) => a + b, 0) / period;
-    const variance = slice.reduce((a, b) => a + (b - m) ** 2, 0) / period;
-    const sd = Math.sqrt(variance);
-    mid[i]   = m;
-    upper[i] = m + std * sd;
-    lower[i] = m - std * sd;
-  }
-  return { upper, mid, lower };
-}
-
-function computeATR(highs, lows, closes, period = 14) {
-  const n = highs.length;
-  const tr = new Array(n).fill(NaN);
-  tr[0] = highs[0] - lows[0];
-  for (let i = 1; i < n; i++) {
-    tr[i] = Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[i-1]), Math.abs(lows[i] - closes[i-1]));
-  }
-  // Wilder's smoothing
-  const atr = new Array(n).fill(NaN);
-  if (n < period) return atr;
-  let sum = 0;
-  for (let i = 0; i < period; i++) sum += tr[i];
-  atr[period - 1] = sum / period;
-  for (let i = period; i < n; i++) {
-    atr[i] = (atr[i-1] * (period - 1) + tr[i]) / period;
-  }
-  return atr;
-}
-
-/* ═══════════════════════════════════════════
-   LIVE RATE LOGIC
-═══════════════════════════════════════════ */
-function pairPrice(rates, pair) {
-  const [baseCcy, quoteCcy] = PAIRS[pair];
-  let rate;
-  if (baseCcy === "USD") {
-    rate = rates[quoteCcy];
-    if (USD_QUOTE.has(pair)) return 1 / rate;
-    return rate;
-  } else {
-    // cross pair
-    return rates[quoteCcy] / rates[baseCcy];
-  }
-}
-
-/* ═══════════════════════════════════════════
-   HISTORY FETCH + OHLCV SYNTHESIS
-═══════════════════════════════════════════ */
-async function fetchHistory(base, quote, days) {
-  const cacheKey = `${base}:${quote}:${days}`;
-  if (histCache[cacheKey]) return histCache[cacheKey];
-
-  const today = todayUTC();
-  const start = addDays(today, -(days + 5));
-  const startStr = toISODate(start);
-  const endStr   = toISODate(today);
-
-  let data;
-  try {
-    const url = `https://api.frankfurter.app/${startStr}..${endStr}?from=${base}&to=${quote}`;
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    data = await resp.json();
-  } catch (e) {
-    throw new Error(`History fetch failed for ${base}/${quote}: ${e.message}`);
-  }
-
-  const rawDates = Object.keys(data.rates).sort();
-  const allDates  = rawDates.slice(-days);
-  const allCloses = allDates.map(d => data.rates[d][quote]);
-
-  // Synthesise OHLCV
-  const rng = makePRNG(42);
-  const n = allDates.length;
-  const opens   = new Array(n);
-  const highs   = new Array(n);
-  const lows    = new Array(n);
-  const volumes = new Array(n);
-
-  // Compute pct changes
-  const pctAbs = new Array(n).fill(0);
-  for (let i = 1; i < n; i++) {
-    pctAbs[i] = Math.abs((allCloses[i] - allCloses[i-1]) / allCloses[i-1]);
-  }
-
-  // Rolling 5-period mean of abs pct change (fillna 0.005)
-  const pct5 = new Array(n).fill(0.005);
-  for (let i = 0; i < n; i++) {
-    const slice = pctAbs.slice(Math.max(0, i - 4), i + 1);
-    const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
-    pct5[i] = mean === 0 ? 0.005 : mean;
-  }
-
-  for (let i = 0; i < n; i++) {
-    opens[i]   = i === 0 ? allCloses[0] : allCloses[i-1];
-    highs[i]   = Math.max(opens[i], allCloses[i]) * (1 + pct5[i] * (0.3 + rng() * 0.7));
-    lows[i]    = Math.min(opens[i], allCloses[i]) * (1 - pct5[i] * (0.3 + rng() * 0.7));
-    volumes[i] = 1000 + Math.floor(rng() * 8000);
-  }
-
-  const result = { dates: allDates, opens, highs, lows, closes: allCloses, volumes };
-  histCache[cacheKey] = result;
-  return result;
-}
-
-async function getHistoryForPair(pair, days) {
-  const [baseCcy, quoteCcy] = PAIRS[pair];
-  const raw = await fetchHistory(baseCcy, quoteCcy, days);
-
-  if (!USD_QUOTE.has(pair)) return raw;
-
-  // Flip prices
-  const closes = raw.closes.map(v => 1 / v);
-  const opens  = raw.opens.map(v => 1 / v);
-  // After inversion, old low → new high, old high → new low
-  const highs  = raw.lows.map(v => 1 / v);
-  const lows   = raw.highs.map(v => 1 / v);
-  const volumes = raw.volumes.slice();
-  return { dates: raw.dates, opens, highs, lows, closes, volumes };
-}
-
-/* ═══════════════════════════════════════════
-   LIVE RATES FETCH
-═══════════════════════════════════════════ */
-async function fetchLiveRates() {
-  const resp = await fetch("https://open.er-api.com/v6/latest/USD");
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+async function fetchPortfolio() {
+  const resp = await fetch(`https://brapi.dev/api/quote/${PORTFOLIO_TICKERS.join(",")}`);
+  if (!resp.ok) throw new Error(`brapi ${resp.status}`);
   return resp.json();
 }
 
-/* ═══════════════════════════════════════════
-   UI BUILDERS
-═══════════════════════════════════════════ */
-function buildPairButtons() {
-  const container = document.getElementById("pair-buttons");
-  container.innerHTML = "";
-  for (const pair of Object.keys(PAIRS)) {
-    const btn = document.createElement("button");
-    btn.className = "pair-btn" + (pair === state.selectedPair ? " active" : "");
-    btn.textContent = pair;
-    btn.dataset.pair = pair;
-    btn.addEventListener("click", () => onPairChange(pair));
-    container.appendChild(btn);
-  }
-}
-
-function buildTFButtons() {
-  const container = document.getElementById("tf-buttons");
-  container.innerHTML = "";
-  for (const tf of Object.keys(TIMEFRAMES)) {
-    const btn = document.createElement("button");
-    btn.className = "tf-btn" + (tf === state.selectedTF ? " active" : "");
-    btn.textContent = tf;
-    btn.dataset.tf = tf;
-    btn.addEventListener("click", () => onTFChange(tf));
-    container.appendChild(btn);
-  }
-}
-
-function buildPriceGrid() {
-  const grid = document.getElementById("price-grid");
-  grid.innerHTML = "";
-  for (const pair of Object.keys(PAIRS)) {
-    const card = document.createElement("div");
-    card.className = "price-card" + (pair === state.selectedPair ? " selected" : "");
-    card.id = `pc-${pair.replace("/","-")}`;
-    card.innerHTML = `
-      <div class="pc-pair">${pair}</div>
-      <div class="pc-price" id="pcp-${pair.replace("/","-")}">—</div>
-      <div class="pc-change" id="pcc-${pair.replace("/","-")}">—</div>
-    `;
-    card.addEventListener("click", () => onPairChange(pair));
-    grid.appendChild(card);
-  }
-}
-
-function updatePriceGrid() {
-  if (!state.liveRates) return;
-  const rates = state.liveRates.rates;
-  for (const pair of Object.keys(PAIRS)) {
-    const price = pairPrice(rates, pair);
-    const isJPY = pair.includes("JPY");
-    const dp = isJPY ? 3 : 5;
-    const priceEl  = document.getElementById(`pcp-${pair.replace("/","-")}`);
-    const changeEl = document.getElementById(`pcc-${pair.replace("/","-")}`);
-    if (!priceEl) continue;
-    priceEl.textContent = price.toFixed(dp);
-    state.livePrices[pair] = price;
-
-    // Approximated daily change from history if available
-    // Try multiple cache keys (any cached timeframe works for last-close reference)
-    const [b, q] = PAIRS[pair];
-    const hist = histCache[`${b}:${q}:${TIMEFRAMES[state.selectedTF]}`]
-              || histCache[`${b}:${q}:30`]
-              || histCache[`${b}:${q}:7`]
-              || null;
-    if (hist && hist.closes.length >= 2) {
-      const rawCloses = hist.closes;
-      const prevRaw = rawCloses[rawCloses.length - 2];
-      const lastRaw = rawCloses[rawCloses.length - 1];
-      const prevClose = USD_QUOTE.has(pair) ? 1 / prevRaw : prevRaw;
-      const lastClose = USD_QUOTE.has(pair) ? 1 / lastRaw : lastRaw;
-      const chg = (price - prevClose) / prevClose * 100;
-      const sign = chg >= 0 ? "+" : "";
-      changeEl.textContent = `${sign}${chg.toFixed(3)}%`;
-      changeEl.className = `pc-change ${chg >= 0 ? "pos" : "neg"}`;
-    } else {
-      changeEl.textContent = "—";
-      changeEl.className = "pc-change";
-    }
-  }
-}
-
-function updateSessions() {
-  const utcHour = new Date().getUTCHours();
-  for (const sess of SESSIONS) {
-    const card = document.getElementById(sess.id);
-    const statusEl = card.querySelector(".session-status");
-    const isActive = utcHour >= sess.start && utcHour < sess.end;
-    card.classList.toggle("active", isActive);
-    statusEl.textContent = isActive ? "Open" : "Closed";
-  }
-}
-
-function updateLastUpdate() {
-  const now = new Date();
-  const ts = now.toUTCString().replace("GMT","UTC");
-  document.getElementById("last-update").textContent = `Last update: ${ts}`;
-  state.lastUpdateTs = now;
-}
-
-/* ═══════════════════════════════════════════
-   CHART
-═══════════════════════════════════════════ */
-function buildChart(hist) {
-  if (!hist) return;
-  const { dates, opens, highs, lows, closes, volumes } = hist;
-
-  const emaFastArr = ema(closes, state.emaFast);
-  const emaSlowArr = ema(closes, state.emaSlow);
-  const rsiArr     = computeRSI(closes, state.rsiPeriod);
-  const { macdLine, signalLine, hist: macdHist } = computeMACD(closes);
-  const bb         = computeBBands(closes);
-
-  // Rangebreaks for weekends
-  const rangeBreaks = [{ pattern: "day of week", bounds: [6, 1] }];
-
-  const traces = [];
-
-  // ── Row 1: Candlestick (top, xaxis3 / yaxis) ────────
-  // Plotly subplot convention: bottom row uses xaxis/yaxis,
-  // middle uses xaxis2/yaxis2, top uses xaxis3/yaxis3 — BUT
-  // we assign yaxis domains top-to-bottom and use a single shared
-  // x-axis (xaxis) for all rows with matches. All traces use xaxis: "x"
-  // so they share one category axis; y-domains provide vertical stacking.
-
-  traces.push({
-    type: "candlestick",
-    x: dates,
-    open: opens, high: highs, low: lows, close: closes,
-    increasing: { line: { color: "#00c853" }, fillcolor: "#00c853" },
-    decreasing: { line: { color: "#ff1744" }, fillcolor: "#ff1744" },
-    name: state.selectedPair,
-    xaxis: "x", yaxis: "y",
-    showlegend: false,
-    line: { width: 1 },
-  });
-
-  // EMAs
-  if (state.showEMA) {
-    traces.push({
-      type: "scatter", mode: "lines",
-      x: dates, y: emaFastArr,
-      line: { color: "#f9a825", width: 1.5 },
-      name: `EMA${state.emaFast}`,
-      xaxis: "x", yaxis: "y",
-      hoverinfo: "x+y",
-    });
-    traces.push({
-      type: "scatter", mode: "lines",
-      x: dates, y: emaSlowArr,
-      line: { color: "#ab47bc", width: 1.5 },
-      name: `EMA${state.emaSlow}`,
-      xaxis: "x", yaxis: "y",
-      hoverinfo: "x+y",
-    });
-  }
-
-  // Bollinger Bands
-  if (state.showBB) {
-    // Upper
-    traces.push({
-      type: "scatter", mode: "lines",
-      x: dates, y: bb.upper,
-      line: { color: "#29b6f6", width: 1, dash: "dot" },
-      name: "BB Upper",
-      xaxis: "x", yaxis: "y",
-      hoverinfo: "skip",
-      showlegend: false,
-    });
-    // Lower — fill back to upper trace
-    traces.push({
-      type: "scatter", mode: "lines",
-      x: dates, y: bb.lower,
-      line: { color: "#29b6f6", width: 1, dash: "dot" },
-      fill: "tonexty",
-      fillcolor: "rgba(41,182,246,0.08)",
-      name: "BB Lower",
-      xaxis: "x", yaxis: "y",
-      hoverinfo: "skip",
-      showlegend: false,
-    });
-    // Mid
-    traces.push({
-      type: "scatter", mode: "lines",
-      x: dates, y: bb.mid,
-      line: { color: "#29b6f6", width: 0.8, dash: "dot" },
-      name: "BB Mid",
-      xaxis: "x", yaxis: "y",
-      hoverinfo: "skip",
-      showlegend: false,
-    });
-  }
-
-  // ── Row 2: RSI ────────────────────────────
-  traces.push({
-    type: "scatter", mode: "lines",
-    x: dates, y: rsiArr,
-    line: { color: "#ff9100", width: 1.5 },
-    name: "RSI",
-    xaxis: "x", yaxis: "y2",
-    hoverinfo: "x+y",
-    showlegend: false,
-  });
-
-  // RSI reference lines
-  const refLines = [
-    { y: 70, color: "rgba(255,23,68,0.5)",   label: "70" },
-    { y: 50, color: "rgba(136,146,164,0.4)", label: "50" },
-    { y: 30, color: "rgba(0,200,83,0.5)",    label: "30" },
-  ];
-  for (const rl of refLines) {
-    traces.push({
-      type: "scatter", mode: "lines",
-      x: [dates[0], dates[dates.length-1]], y: [rl.y, rl.y],
-      line: { color: rl.color, width: 1, dash: "dot" },
-      name: rl.label,
-      xaxis: "x", yaxis: "y2",
-      hoverinfo: "skip",
-      showlegend: false,
-    });
-  }
-
-  // ── Row 3: MACD histogram ──────────────────
-  const macdColors = macdHist.map(v =>
-    isNaN(v) ? "rgba(0,0,0,0)" : v >= 0 ? "rgba(0,200,83,0.8)" : "rgba(255,23,68,0.8)"
-  );
-  traces.push({
-    type: "bar",
-    x: dates, y: macdHist,
-    marker: { color: macdColors },
-    name: "MACD Hist",
-    xaxis: "x", yaxis: "y3",
-    hoverinfo: "x+y",
-    showlegend: false,
-  });
-  traces.push({
-    type: "scatter", mode: "lines",
-    x: dates, y: macdLine,
-    line: { color: "#29b6f6", width: 1.5 },
-    name: "MACD",
-    xaxis: "x", yaxis: "y3",
-    hoverinfo: "x+y",
-    showlegend: false,
-  });
-  traces.push({
-    type: "scatter", mode: "lines",
-    x: dates, y: signalLine,
-    line: { color: "#f06292", width: 1.5 },
-    name: "Signal",
-    xaxis: "x", yaxis: "y3",
-    hoverinfo: "x+y",
-    showlegend: false,
-  });
-
-  // ── Layout ────────────────────────────────
-  const layout = {
-    paper_bgcolor: "#0e1117",
-    plot_bgcolor:  "#0e1117",
-    margin: { l: 60, r: 20, t: 20, b: 50 },
-    font: { color: "#8892a4", size: 11, family: "'Courier New', monospace" },
-    showlegend: false,
-    bargap: 0,
-
-    // Single shared x-axis at the bottom
-    xaxis: {
-      type: "category",
-      showgrid: true,
-      gridcolor: "#2a2d3e",
-      gridwidth: 1,
-      tickfont: { color: "#8892a4", size: 10 },
-      rangeslider: { visible: false },
-      showticklabels: true,
-      tickangle: -30,
-      nticks: 10,
-      domain: [0, 1],
-      // No rangebreaks on category axis — category axis already skips missing dates
-    },
-
-    // y-axes stacked via domain
-    yaxis: {
-      domain: [0.45, 1.0],
-      showgrid: true,
-      gridcolor: "#2a2d3e",
-      tickfont: { color: "#8892a4", size: 10 },
-      side: "left",
-      title: { text: state.selectedPair, font: { color: "#8892a4", size: 10 } },
-    },
-    yaxis2: {
-      domain: [0.23, 0.43],
-      showgrid: true,
-      gridcolor: "#2a2d3e",
-      tickfont: { color: "#8892a4", size: 10 },
-      side: "left",
-      title: { text: "RSI", font: { color: "#8892a4", size: 10 } },
-      range: [0, 100],
-    },
-    yaxis3: {
-      domain: [0, 0.21],
-      showgrid: true,
-      gridcolor: "#2a2d3e",
-      tickfont: { color: "#8892a4", size: 10 },
-      side: "left",
-      title: { text: "MACD", font: { color: "#8892a4", size: 10 } },
-    },
-
-    height: 600,
-    hoverlabel: {
-      bgcolor: "#1a1d2e",
-      bordercolor: "#2a2d3e",
-      font: { color: "#e0e0e0", size: 11, family: "'Courier New', monospace" },
-    },
-    dragmode: "pan",
-  };
-
-  const config = {
-    displayModeBar: true,
-    modeBarButtonsToRemove: ["lasso2d","select2d","autoScale2d"],
-    displaylogo: false,
-    responsive: true,
-    scrollZoom: true,
-  };
-
-  Plotly.react("plotly-chart", traces, layout, config);
-}
-
-/* ═══════════════════════════════════════════
-   ANALYTICS
-═══════════════════════════════════════════ */
-function updateAnalytics(hist) {
-  if (!hist) return;
-  const { dates, highs, lows, closes } = hist;
-  const n = closes.length;
-  const isJPY = state.selectedPair.includes("JPY");
-  const dp = isJPY ? 3 : 5;
-
-  const lastClose = closes[n-1];
-  const prevClose = closes[n-2] ?? closes[n-1];
-  const dailyChange = (lastClose - prevClose) / prevClose * 100;
-
-  const periodHigh = Math.max(...highs);
-  const periodLow  = Math.min(...lows);
-
-  const atrArr = computeATR(highs, lows, closes, 14);
-  const lastATR = atrArr.filter(v => !isNaN(v)).pop() ?? NaN;
-
-  // RSI
-  const rsiArr = computeRSI(closes, state.rsiPeriod);
-  const lastRSI = rsiArr.filter(v => !isNaN(v)).pop() ?? NaN;
-
-  // EMA trend
-  const emaFastArr = ema(closes, state.emaFast);
-  const emaSlowArr = ema(closes, state.emaSlow);
-  const lastEMAFast = emaFastArr[n-1];
-  const lastEMASlow = emaSlowArr[n-1];
-
-  // MACD
-  const { macdLine, signalLine } = computeMACD(closes);
-  const lastMACD   = macdLine.filter(v => !isNaN(v)).pop() ?? NaN;
-  const lastSignal = signalLine.filter(v => !isNaN(v)).pop() ?? NaN;
-
-  // BB width
-  const bb = computeBBands(closes);
-  const lastBBUpper = bb.upper.filter(v => !isNaN(v)).pop() ?? NaN;
-  const lastBBMid   = bb.mid.filter(v => !isNaN(v)).pop() ?? NaN;
-  const lastBBLower = bb.lower.filter(v => !isNaN(v)).pop() ?? NaN;
-  const bbWidth = isNaN(lastBBMid) || lastBBMid === 0 ? NaN : (lastBBUpper - lastBBLower) / lastBBMid * 100;
-
-  // Annualized volatility
-  const returns = [];
-  for (let i = 1; i < closes.length; i++) {
-    returns.push((closes[i] - closes[i-1]) / closes[i-1]);
-  }
-  const meanR = returns.reduce((a, b) => a + b, 0) / returns.length;
-  const varR  = returns.reduce((a, b) => a + (b - meanR)**2, 0) / returns.length;
-  const annVol = Math.sqrt(varR * 252) * 100;
-
-  // Update DOM
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  const setHTML = (id, val) => { const el = document.getElementById(id); if (el) el.innerHTML = val; };
-
-  set("stat-last", lastClose.toFixed(dp));
-
-  const chgSign = dailyChange >= 0 ? "+" : "";
-  setHTML("stat-change", `<span class="${dailyChange >= 0 ? 'pos' : 'neg'}">${chgSign}${dailyChange.toFixed(4)}%</span>`);
-
-  set("stat-high", periodHigh.toFixed(dp));
-  set("stat-low",  periodLow.toFixed(dp));
-  set("stat-atr",  isNaN(lastATR) ? "—" : lastATR.toFixed(dp));
-
-  // RSI
-  let rsiBadge;
-  if (isNaN(lastRSI)) {
-    rsiBadge = `<span class="stat-val">—</span>`;
-  } else if (lastRSI >= 70) {
-    rsiBadge = `<span class="stat-val">${lastRSI.toFixed(1)} <span class="badge badge-red">Overbought</span></span>`;
-  } else if (lastRSI <= 30) {
-    rsiBadge = `<span class="stat-val">${lastRSI.toFixed(1)} <span class="badge badge-green">Oversold</span></span>`;
-  } else {
-    rsiBadge = `<span class="stat-val">${lastRSI.toFixed(1)} <span class="badge badge-grey">Neutral</span></span>`;
-  }
-  setHTML("stat-rsi", rsiBadge);
-
-  // EMA trend
-  const bullish = lastEMAFast > lastEMASlow;
-  setHTML("stat-ema-trend", `<span class="${bullish ? 'pos' : 'neg'}">${bullish ? "Bullish ▲" : "Bearish ▼"}</span>`);
-
-  // MACD signal
-  const macdBuy = lastMACD > lastSignal;
-  setHTML("stat-macd-sig", `<span class="${macdBuy ? 'pos' : 'neg'}">${macdBuy ? "Buy ▲" : "Sell ▼"}</span>`);
-
-  set("stat-bb-width", isNaN(bbWidth) ? "—" : `${bbWidth.toFixed(2)}%`);
-  set("stat-vol", isNaN(annVol) ? "—" : `${annVol.toFixed(2)}%`);
-}
-
-/* ═══════════════════════════════════════════
-   CORRELATION MATRIX
-═══════════════════════════════════════════ */
-async function buildCorrelationMatrix() {
-  if (corrCache) {
-    renderCorrChart(corrCache);
+function renderPortfolio(data) {
+  const grid = document.getElementById("portfolio-grid");
+  if (!data?.results?.length) {
+    grid.innerHTML = '<span class="port-loading">Dados indisponíveis</span>';
     return;
   }
+  grid.innerHTML = data.results.map(s => {
+    const chg  = s.regularMarketChangePercent ?? 0;
+    const dir  = chg >= 0 ? "up" : "down";
+    const cls  = chg >= 0 ? "pos" : "neg";
+    const sign = chg >= 0 ? "+" : "";
+    const price = (s.regularMarketPrice ?? 0)
+      .toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const name = s.shortName || s.longName || s.symbol;
+    return `
+      <div class="port-card ${dir}">
+        <div class="port-ticker">${s.symbol}</div>
+        <div class="port-name" title="${name}">${name}</div>
+        <div class="port-price">R$ ${price}</div>
+        <div class="port-change ${cls}">${sign}${chg.toFixed(2)}%</div>
+      </div>`;
+  }).join("");
+}
 
-  // Fetch 30d history for all pairs
-  const allPairs = Object.keys(PAIRS);
-  const results = {};
+async function loadPortfolio() {
   try {
-    const fetches = allPairs.map(async (pair) => {
-      const hist = await getHistoryForPair(pair, 30);
-      results[pair] = hist;
-    });
-    await Promise.all(fetches);
+    renderPortfolio(await fetchPortfolio());
   } catch (e) {
-    document.getElementById("corr-chart").innerHTML =
-      `<div class="error-msg">Correlation unavailable: ${e.message}</div>`;
-    return;
-  }
-
-  // Build daily returns for each pair aligned by date
-  // Collect all dates
-  const dateSet = new Set();
-  for (const pair of allPairs) {
-    for (const d of results[pair].dates) dateSet.add(d);
-  }
-  const sortedDates = [...dateSet].sort();
-
-  // Map pair -> returns (aligned)
-  const returnsByPair = {};
-  for (const pair of allPairs) {
-    const dateToClose = {};
-    const hist = results[pair];
-    for (let i = 0; i < hist.dates.length; i++) {
-      dateToClose[hist.dates[i]] = hist.closes[i];
-    }
-    const rets = [];
-    for (let i = 1; i < sortedDates.length; i++) {
-      const d0 = sortedDates[i-1], d1 = sortedDates[i];
-      if (dateToClose[d0] !== undefined && dateToClose[d1] !== undefined) {
-        rets.push((dateToClose[d1] - dateToClose[d0]) / dateToClose[d0]);
-      } else {
-        rets.push(null);
-      }
-    }
-    returnsByPair[pair] = rets;
-  }
-
-  // Compute pairwise Pearson correlation
-  const nPairs = allPairs.length;
-  const corrMatrix = Array.from({length: nPairs}, () => new Array(nPairs).fill(0));
-
-  function pearson(xs, ys) {
-    // filter out nulls
-    const pairs = [];
-    for (let i = 0; i < xs.length; i++) {
-      if (xs[i] !== null && ys[i] !== null) pairs.push([xs[i], ys[i]]);
-    }
-    const n = pairs.length;
-    if (n < 3) return 0;
-    const mx = pairs.reduce((a,b) => a + b[0], 0) / n;
-    const my = pairs.reduce((a,b) => a + b[1], 0) / n;
-    let num = 0, dx2 = 0, dy2 = 0;
-    for (const [x, y] of pairs) {
-      num += (x - mx) * (y - my);
-      dx2 += (x - mx) ** 2;
-      dy2 += (y - my) ** 2;
-    }
-    const denom = Math.sqrt(dx2 * dy2);
-    return denom === 0 ? 0 : num / denom;
-  }
-
-  for (let i = 0; i < nPairs; i++) {
-    for (let j = 0; j < nPairs; j++) {
-      corrMatrix[i][j] = pearson(returnsByPair[allPairs[i]], returnsByPair[allPairs[j]]);
-    }
-  }
-
-  corrCache = { matrix: corrMatrix, labels: allPairs };
-  renderCorrChart(corrCache);
-}
-
-function renderCorrChart(data) {
-  const { matrix, labels } = data;
-
-  const textMatrix = matrix.map(row => row.map(v => v.toFixed(2)));
-
-  const trace = {
-    type: "heatmap",
-    z: matrix,
-    x: labels,
-    y: labels,
-    colorscale: [[0, "#ff1744"], [0.5, "#1a1d2e"], [1, "#00c853"]],
-    zmin: -1, zmax: 1,
-    text: textMatrix,
-    texttemplate: "%{text}",
-    textfont: { size: 9, color: "#e0e0e0" },
-    hovertemplate: "%{x} vs %{y}: %{z:.3f}<extra></extra>",
-    showscale: true,
-    colorbar: {
-      thickness: 10,
-      len: 0.9,
-      tickfont: { color: "#8892a4", size: 9 },
-      outlinecolor: "#2a2d3e",
-    },
-    reversescale: false,
-  };
-
-  const layout = {
-    paper_bgcolor: "transparent",
-    plot_bgcolor:  "transparent",
-    margin: { l: 70, r: 30, t: 10, b: 70 },
-    font: { color: "#8892a4", size: 9, family: "'Courier New', monospace" },
-    height: 280,
-    xaxis: {
-      tickfont: { color: "#8892a4", size: 9 },
-      tickangle: -45,
-      showgrid: false,
-    },
-    yaxis: {
-      tickfont: { color: "#8892a4", size: 9 },
-      showgrid: false,
-      autorange: "reversed",
-    },
-  };
-
-  const config = {
-    displayModeBar: false,
-    responsive: true,
-    staticPlot: false,
-  };
-
-  Plotly.newPlot("corr-chart", [trace], layout, config);
-  state.corrChartRendered = true;
-}
-
-/* ═══════════════════════════════════════════
-   PIP CALCULATOR
-═══════════════════════════════════════════ */
-function updatePipCalc() {
-  const lotSize = parseFloat(document.getElementById("pip-lot").value)    || 1;
-  const stopPips = parseFloat(document.getElementById("pip-stop").value)  || 20;
-  const equity   = parseFloat(document.getElementById("pip-equity").value) || 10000;
-  const riskPct  = parseFloat(document.getElementById("pip-risk").value)  || 1;
-
-  const isJPY = state.selectedPair.includes("JPY");
-  const pipSize = isJPY ? 0.01 : 0.0001;
-
-  // Get last close for JPY pip value calculation
-  const lastClose = state.historyData
-    ? state.historyData.closes[state.historyData.closes.length - 1]
-    : 1;
-
-  const pipValue    = pipSize * lotSize * 100000 / (isJPY ? lastClose : 1);
-  const riskOnTrade = stopPips * pipValue;
-  const maxLot      = (equity * riskPct / 100) / (stopPips * pipSize * 100000);
-
-  document.getElementById("pip-val").textContent       = `$${pipValue.toFixed(4)}`;
-  document.getElementById("pip-risk-trade").textContent = `$${riskOnTrade.toFixed(2)}`;
-  document.getElementById("pip-max-lot").textContent    = maxLot.toFixed(4);
-}
-
-/* ═══════════════════════════════════════════
-   EVENT HANDLERS
-═══════════════════════════════════════════ */
-async function onPairChange(pair) {
-  state.selectedPair = pair;
-  // Update pair button highlights
-  document.querySelectorAll(".pair-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.pair === pair);
-  });
-  // Update price card highlights
-  // IDs are "pc-EUR-USD" etc — one dash separator, replace first dash with /
-  document.querySelectorAll(".price-card").forEach(card => {
-    const pairFromId = card.id.slice(3).replace(/-/, "/");
-    card.classList.toggle("selected", pairFromId === pair);
-  });
-  await loadPairData();
-}
-
-async function onTFChange(tf) {
-  state.selectedTF = tf;
-  document.querySelectorAll(".tf-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.tf === tf);
-  });
-  await loadPairData();
-}
-
-function onSliderChange() {
-  if (!state.historyData) return;
-  buildChart(state.historyData);
-  updateAnalytics(state.historyData);
-  updatePipCalc();
-}
-
-/* ═══════════════════════════════════════════
-   LOAD FUNCTIONS
-═══════════════════════════════════════════ */
-async function loadLiveRates() {
-  try {
-    const data = await fetchLiveRates();
-    state.liveRates = data;
-    updatePriceGrid();
-    updateLastUpdate();
-  } catch (e) {
-    console.error("Live rates error:", e);
+    document.getElementById("portfolio-grid").innerHTML =
+      '<span class="port-loading">Erro ao carregar cotações</span>';
   }
 }
 
-async function loadPairData() {
-  const chartLoading = document.getElementById("chart-loading");
-  chartLoading.style.display = "flex";
-
-  try {
-    const days = TIMEFRAMES[state.selectedTF];
-    const hist = await getHistoryForPair(state.selectedPair, days);
-    state.historyData = hist;
-
-    buildChart(hist);
-    updateAnalytics(hist);
-    updatePipCalc();
-    updatePriceGrid();
-  } catch (e) {
-    console.error("History error:", e);
-    chartLoading.innerHTML = `<div class="error-msg">Chart error: ${e.message}</div>`;
-    return;
-  } finally {
-    chartLoading.style.display = "none";
-  }
-}
-
-async function loadAll() {
-  // Mark refresh button disabled
-  const refreshBtn = document.getElementById("refresh-btn");
-  refreshBtn.disabled = true;
-  refreshBtn.textContent = "⟳ Loading…";
-
-  try {
-    await Promise.all([
-      loadLiveRates(),
-      loadPairData(),
-    ]);
-    // Correlation matrix (independent load)
-    buildCorrelationMatrix();
-  } finally {
-    refreshBtn.disabled = false;
-    refreshBtn.textContent = "↺ Refresh Data";
-  }
-}
-
-function clearCaches() {
-  for (const key of Object.keys(histCache)) delete histCache[key];
-  corrCache = null;
-  state.corrChartRendered = false;
-}
-
-/* ═══════════════════════════════════════════
-   PRICE CARD SELECTION FIX
-   (IDs have form pc-EUR-USD, pc-EUR-GBP etc.)
-═══════════════════════════════════════════ */
-function syncPriceCardSelection() {
-  document.querySelectorAll(".price-card").forEach(card => {
-    const raw = card.id.slice(3); // remove "pc-"
-    // Reconstruct pair: find the separator "-" that makes both parts valid
-    // Format is "BASE-QUOTE" where BASE and QUOTE may have no dash
-    // We stored them as pair.replace("/","-"), so single dash => single slash
-    // EUR/GBP => EUR-GBP, USD/JPY => USD-JPY (all single dash)
-    const pair = raw.replace("-", "/");
-    card.classList.toggle("selected", pair === state.selectedPair);
-  });
-}
-
-/* ═══════════════════════════════════════════
-   WIRE UP CONTROLS
-═══════════════════════════════════════════ */
-function wireControls() {
-  // Sliders
-  document.getElementById("ema-fast").addEventListener("input", function() {
-    state.emaFast = parseInt(this.value);
-    document.getElementById("ema-fast-val").textContent = this.value;
-    onSliderChange();
-  });
-  document.getElementById("ema-slow").addEventListener("input", function() {
-    state.emaSlow = parseInt(this.value);
-    document.getElementById("ema-slow-val").textContent = this.value;
-    onSliderChange();
-  });
-  document.getElementById("rsi-period").addEventListener("input", function() {
-    state.rsiPeriod = parseInt(this.value);
-    document.getElementById("rsi-period-val").textContent = this.value;
-    onSliderChange();
-  });
-
-  // Toggles
-  document.getElementById("show-bb").addEventListener("change", function() {
-    state.showBB = this.checked;
-    onSliderChange();
-  });
-  document.getElementById("show-ema").addEventListener("change", function() {
-    state.showEMA = this.checked;
-    onSliderChange();
-  });
-
-  // Refresh
-  document.getElementById("refresh-btn").addEventListener("click", () => {
-    clearCaches();
-    loadAll();
-  });
-
-  // Pip calculator inputs
-  ["pip-lot","pip-stop","pip-equity","pip-risk"].forEach(id => {
-    document.getElementById(id).addEventListener("input", updatePipCalc);
-  });
-}
-
-/* ═══════════════════════════════════════════
-   INIT
-═══════════════════════════════════════════ */
-function init() {
-  buildPairButtons();
-  buildTFButtons();
-  buildPriceGrid();
-  wireControls();
-
-  // Sessions + periodic update
-  updateSessions();
-  setInterval(updateSessions, 30_000);
-
-  // Initial data load
-  loadAll();
-
-  // Auto-refresh live rates every 60s
-  setInterval(loadLiveRates, 60_000);
-}
-
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", loadPortfolio);
 </script>
 </body>
 </html>
