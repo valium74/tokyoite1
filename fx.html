@@ -394,6 +394,54 @@
   .pos { color: var(--green); }
   .neg { color: var(--red); }
 
+  /* ── USD Indicators ─────────────────────── */
+  #usd-indicators {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .usd-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 18px;
+    position: relative;
+    overflow: hidden;
+    min-width: 175px;
+    flex: 1;
+  }
+  .usd-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    transition: background 0.15s;
+  }
+  .usd-card.up::before   { background: var(--green); }
+  .usd-card.down::before { background: var(--red); }
+  .usd-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin-bottom: 1px;
+  }
+  .usd-sub {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-bottom: 7px;
+  }
+  .usd-price {
+    font-family: 'Courier New', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .usd-change { font-family: 'Courier New', monospace; font-size: 11px; }
+
   /* ── Portfolio ─────────────────────────── */
   #portfolio-section {
     display: flex;
@@ -773,6 +821,9 @@
   <!-- Live price grid -->
   <div id="price-grid"></div>
 
+  <!-- USD Indicators: DXY · DOL · WDO -->
+  <div id="usd-indicators"></div>
+
   <!-- Main chart -->
   <div id="chart-container">
     <div id="chart-loading">
@@ -910,6 +961,7 @@ const state = {
   corrData: null,          // 30d all-pair history for correlation
   corrChartRendered: false,
   lastUpdateTs: null,
+  dxyMeta: null,             // cached DXY meta from Yahoo Finance
 };
 
 // Cache: { "EUR:USD:30": {dates,closes,...} }
@@ -1852,6 +1904,88 @@ async function loadPortfolio() {
   }
 }
 
+/* ═══════════════════════════════════════════
+   USD INDICATORS: DXY · DOL · WDO
+═══════════════════════════════════════════ */
+async function fetchDXY() {
+  const resp = await fetch(
+    "https://query1.finance.yahoo.com/v8/finance/chart/DX=F?interval=1d&range=5d"
+  );
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const json = await resp.json();
+  return json.chart?.result?.[0]?.meta ?? null;
+}
+
+function renderUSDIndicators() {
+  const el = document.getElementById("usd-indicators");
+  if (!el) return;
+
+  // ── DXY card ──────────────────────────────
+  let dxyHTML;
+  const m = state.dxyMeta;
+  if (m) {
+    const price = m.regularMarketPrice ?? 0;
+    const prev  = m.chartPreviousClose ?? m.previousClose ?? price;
+    const chg   = price - prev;
+    const pct   = prev !== 0 ? (chg / prev) * 100 : 0;
+    const dir   = chg >= 0 ? "up" : "down";
+    const cls   = chg >= 0 ? "pos" : "neg";
+    const sign  = chg >= 0 ? "+" : "";
+    dxyHTML = `
+      <div class="usd-card ${dir}">
+        <div class="usd-label">DXY</div>
+        <div class="usd-sub">US Dollar Index</div>
+        <div class="usd-price">${price.toFixed(3)}</div>
+        <div class="usd-change ${cls}">${sign}${chg.toFixed(3)} (${sign}${pct.toFixed(2)}%)</div>
+      </div>`;
+  } else {
+    dxyHTML = `
+      <div class="usd-card">
+        <div class="usd-label">DXY</div>
+        <div class="usd-sub">US Dollar Index</div>
+        <div class="usd-price">—</div>
+        <div class="usd-change" style="color:var(--text-dim)">Unavailable</div>
+      </div>`;
+  }
+
+  // ── DOL / WDO cards (spot USD/BRL × 1000) ─
+  // DOL and WDO are B3 futures on USD/BRL; no free CORS-enabled API
+  // exposes real-time B3 futures prices. We derive a reference price
+  // from the spot USD/BRL rate already loaded by the FX dashboard.
+  const brl = state.liveRates?.rates?.BRL;
+  const refPrice = brl ? (brl * 1000).toFixed(0) : "—";
+  const refNote = brl
+    ? `Spot USD/BRL: ${brl.toFixed(4)}`
+    : "Waiting for rates…";
+
+  const dolHTML = `
+    <div class="usd-card">
+      <div class="usd-label">DOL</div>
+      <div class="usd-sub">Dólar Futuro · B3 · Ref. Spot</div>
+      <div class="usd-price">${refPrice}</div>
+      <div class="usd-change" style="color:var(--text-dim)">${refNote}</div>
+    </div>`;
+
+  const wdoHTML = `
+    <div class="usd-card">
+      <div class="usd-label">WDO</div>
+      <div class="usd-sub">Mini Dólar · B3 · Ref. Spot</div>
+      <div class="usd-price">${refPrice}</div>
+      <div class="usd-change" style="color:var(--text-dim)">${refNote}</div>
+    </div>`;
+
+  el.innerHTML = dxyHTML + dolHTML + wdoHTML;
+}
+
+async function loadUSDIndicators() {
+  try {
+    state.dxyMeta = await fetchDXY();
+  } catch (e) {
+    console.error("DXY fetch error:", e);
+  }
+  renderUSDIndicators();
+}
+
 async function loadAll() {
   // Mark refresh button disabled
   const refreshBtn = document.getElementById("refresh-btn");
@@ -1864,6 +1998,8 @@ async function loadAll() {
       loadPairData(),
       loadPortfolio(),
     ]);
+    // USD indicators run after liveRates is set (DOL/WDO derive from BRL rate)
+    loadUSDIndicators();
     // Correlation matrix (independent load)
     buildCorrelationMatrix();
   } finally {
@@ -1953,8 +2089,11 @@ function init() {
   // Initial data load
   loadAll();
 
-  // Auto-refresh live rates every 60s
-  setInterval(loadLiveRates, 60_000);
+  // Auto-refresh live rates every 60s; re-render DOL/WDO from updated BRL rate
+  setInterval(async () => { await loadLiveRates(); renderUSDIndicators(); }, 60_000);
+
+  // Auto-refresh DXY every 5 minutes
+  setInterval(loadUSDIndicators, 5 * 60_000);
 
   // Auto-refresh portfolio every 5 minutes
   setInterval(loadPortfolio, 5 * 60_000);
