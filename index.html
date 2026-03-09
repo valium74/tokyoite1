@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tokyoite Capital – Portal</title>
+<title>Tokyoite Investment Club – Portal</title>
 <style>
   :root {
     --bg: #0e1117;
@@ -129,60 +129,6 @@
     margin-top: 4px;
   }
 
-  /* ── Portfolio ───────────────────────────── */
-  #portfolio-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
-    gap: 10px;
-  }
-
-  .port-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 14px;
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.15s;
-  }
-  .port-card:hover { border-color: var(--accent); }
-  .port-card::before {
-    content: '';
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 3px;
-    background: var(--border);
-  }
-  .port-card.up::before   { background: var(--green); }
-  .port-card.down::before { background: var(--red); }
-
-  .port-ticker {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--accent);
-    letter-spacing: 0.06em;
-    margin-bottom: 2px;
-  }
-  .port-name {
-    font-size: 10px;
-    color: var(--text-dim);
-    margin-bottom: 6px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .port-price {
-    font-family: 'Courier New', monospace;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 3px;
-  }
-  .port-change { font-family: 'Courier New', monospace; font-size: 11px; }
-  .pos { color: var(--green); }
-  .neg { color: var(--red); }
-  .port-loading { color: var(--text-dim); font-size: 12px; padding: 8px 0; display: block; }
-
   /* ── Footer ──────────────────────────────── */
   #footer {
     background: var(--bg2);
@@ -249,9 +195,9 @@
 
 <!-- ── Top bar ──────────────────────────────── -->
 <div id="top-bar">
-  <img src="New_tokyoite_logo_20250719.png" alt="Tokyoite Capital" />
+  <img src="New_tokyoite_logo_20250719.png" alt="Tokyoite Investment Club" />
   <div id="top-bar-text">
-    <h1>Tokyoite Capital</h1>
+    <h1>Tokyoite Investment Club</h1>
     <p>Investment Intelligence Platform</p>
   </div>
 </div>
@@ -309,29 +255,36 @@
         <div class="feature-link">Open Dashboard →</div>
       </a>
 
+      <a class="feature-card" href="portfolio.html">
+        <div class="feature-icon">📈</div>
+        <div class="feature-title">Portfolio Dashboard</div>
+        <div class="feature-tags">
+          <span class="tag">Live Prices</span>
+          <span class="tag">B3</span>
+          <span class="tag">BDRs</span>
+          <span class="tag">10 Holdings</span>
+        </div>
+        <div class="feature-desc">
+          Real-time prices for Tokyoite Investment Club portfolio holdings — Brazilian equities and BDRs listed on B3. Daily change and performance summary.
+        </div>
+        <div class="feature-link">Open Dashboard →</div>
+      </a>
+
       <a class="feature-card" href="cartas.html">
         <div class="feature-icon">📄</div>
-        <div class="feature-title">Cartas aos Cotistas</div>
+        <div class="feature-title">Letters and Other Communications</div>
         <div class="feature-tags">
           <span class="tag">2024</span>
           <span class="tag">2025</span>
           <span class="tag">2026</span>
-          <span class="tag">15 Cartas</span>
+          <span class="tag">PDF</span>
         </div>
         <div class="feature-desc">
-          Todas as cartas periódicas publicadas pela Tokyoite Capital aos investidores, desde agosto de 2024. Disponíveis para leitura e download em PDF.
+          Periodic letters and communications published by Tokyoite Investment Club to investors since August 2024. Available for reading and PDF download.
         </div>
-        <div class="feature-link">Ver Cartas →</div>
+        <div class="feature-link">Open →</div>
       </a>
 
-    </div>
-  </div>
-
-  <!-- Portfolio -->
-  <div>
-    <div class="section-heading">Portfolio – Tokyoite Investment Club</div>
-    <div id="portfolio-grid">
-      <span class="port-loading">Carregando cotações…</span>
     </div>
   </div>
 
@@ -340,7 +293,7 @@
     <div class="section-heading">Fale com o Gestor</div>
     <div id="contact-wrapper">
       <div id="contact-info">
-        <p>Entre em contato com a equipe da Tokyoite Capital para dúvidas sobre o fundo, relatórios ou qualquer outro assunto.</p>
+        <p>Entre em contato com a equipe do Tokyoite Investment Club para dúvidas sobre o fundo, relatórios ou qualquer outro assunto.</p>
         <div class="contact-detail">
           <span class="contact-icon">✉</span>
           <span>tokyoite@valiocapital.com</span>
@@ -375,64 +328,11 @@
 
 <!-- ── Footer ───────────────────────────────── -->
 <div id="footer">
-  Tokyoite Capital &middot; For educational purposes only &middot; Not financial advice &middot; Portfolio data: Yahoo Finance
+  Tokyoite Investment Club &middot; For educational purposes only &middot; Not financial advice
 </div>
 
 <script>
 'use strict';
-
-const PORTFOLIO = [
-  { ticker: "SMTO3",  sym: "SMTO3.SA"  },
-  { ticker: "IGTI3",  sym: "IGTI3.SA"  },
-  { ticker: "AURE3",  sym: "AURE3.SA"  },
-  { ticker: "SUZB3",  sym: "SUZB3.SA"  },
-  { ticker: "ITUB3",  sym: "ITUB3.SA"  },
-  { ticker: "BERK34", sym: "BERK34.SA" },
-  { ticker: "MSFT34", sym: "MSFT34.SA" },
-  { ticker: "BBSE3",  sym: "BBSE3.SA"  },
-  { ticker: "F1IS34", sym: "F1IS34.SA" },
-  { ticker: "SLCE3",  sym: "SLCE3.SA"  },
-];
-
-async function fetchStock(sym) {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=5d`;
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  const json = await resp.json();
-  const m = json.chart?.result?.[0]?.meta;
-  if (!m) return null;
-  const price = m.regularMarketPrice ?? 0;
-  const prev  = m.chartPreviousClose ?? m.previousClose ?? price;
-  const chgPct = prev !== 0 ? ((price - prev) / prev) * 100 : 0;
-  return { price, chgPct, name: m.shortName || m.longName || sym };
-}
-
-async function loadPortfolio() {
-  const grid = document.getElementById("portfolio-grid");
-  try {
-    const results = await Promise.allSettled(PORTFOLIO.map(p => fetchStock(p.sym)));
-    grid.innerHTML = PORTFOLIO.map((p, i) => {
-      const r = results[i];
-      if (r.status !== "fulfilled" || !r.value) {
-        return `<div class="port-card"><div class="port-ticker">${p.ticker}</div><div class="port-change" style="color:var(--text-dim)">—</div></div>`;
-      }
-      const { price, chgPct, name } = r.value;
-      const dir  = chgPct >= 0 ? "up" : "down";
-      const cls  = chgPct >= 0 ? "pos" : "neg";
-      const sign = chgPct >= 0 ? "+" : "";
-      const priceStr = price.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      return `
-        <div class="port-card ${dir}">
-          <div class="port-ticker">${p.ticker}</div>
-          <div class="port-name" title="${name}">${name}</div>
-          <div class="port-price">R$ ${priceStr}</div>
-          <div class="port-change ${cls}">${sign}${chgPct.toFixed(2)}%</div>
-        </div>`;
-    }).join("");
-  } catch (e) {
-    grid.innerHTML = '<span class="port-loading">Erro ao carregar cotações</span>';
-  }
-}
 
 // ── Contact form ──────────────────────────
 // To enable email delivery without opening the mail client:
@@ -488,7 +388,6 @@ document.getElementById("contact-form").addEventListener("submit", async functio
   }
 });
 
-document.addEventListener("DOMContentLoaded", loadPortfolio);
 </script>
 </body>
 </html>

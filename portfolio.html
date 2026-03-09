@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Dashboard – Tokyoite Investment Club</title>
+<script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+<style>
+  :root {
+    --bg: #0e1117;
+    --bg2: #1a1d2e;
+    --bg3: #1e2130;
+    --accent: #29b6f6;
+    --green: #00c853;
+    --red: #ff1744;
+    --yellow: #f9a825;
+    --text: #e0e0e0;
+    --text-dim: #8892a4;
+    --border: #2a2d3e;
+    --sidebar-width: 220px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    display: flex;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── Sidebar ─────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 14px;
+    gap: 18px;
+    z-index: 100;
+  }
+
+  #sidebar-logo { padding: 4px 0 8px; border-bottom: 1px solid var(--border); }
+  #sidebar-logo img { width: 100%; height: auto; display: block; }
+
+  #sidebar h2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-link {
+    display: block;
+    padding: 8px 10px;
+    border-radius: 5px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 13px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .nav-link:hover { background: var(--bg3); color: var(--text); }
+  .nav-link.active { background: var(--bg3); color: var(--accent); font-weight: 600; }
+
+  .sidebar-caption {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    padding: 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-top: auto;
+  }
+
+  /* ── Main content ────────────────────────── */
+  #main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    min-width: 0;
+  }
+
+  /* ── Page header ─────────────────────────── */
+  #page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  #page-header-left { display: flex; flex-direction: column; gap: 4px; }
+  #page-header h1 { font-size: 22px; font-weight: 700; color: var(--text); }
+  #page-header p { font-size: 13px; color: var(--text-dim); }
+  #last-update { font-size: 11px; color: var(--text-dim); }
+
+  /* ── Section heading ─────────────────────── */
+  .section-heading {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+
+  /* ── Stock cards grid ────────────────────── */
+  #portfolio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
+  }
+
+  .port-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .port-card:hover { border-color: var(--accent); }
+  .port-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--border);
+  }
+  .port-card.up::before   { background: var(--green); }
+  .port-card.down::before { background: var(--red); }
+
+  .port-ticker {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    margin-bottom: 3px;
+  }
+  .port-name {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .port-price {
+    font-family: 'Courier New', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .port-change { font-family: 'Courier New', monospace; font-size: 12px; }
+  .port-abs { font-family: 'Courier New', monospace; font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .port-skeleton {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  /* ── Chart ───────────────────────────────── */
+  .chart-container {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  /* ── Summary row ─────────────────────────── */
+  #summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .summary-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .summary-label { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .summary-value { font-family: 'Courier New', monospace; font-size: 20px; font-weight: 700; color: var(--text); }
+  .summary-sub { font-size: 11px; color: var(--text-dim); }
+
+  /* ── Footer ──────────────────────────────── */
+  #footer-note {
+    font-size: 11px;
+    color: var(--text-dim);
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────── -->
+<nav id="sidebar">
+  <div id="sidebar-logo">
+    <img src="New_tokyoite_logo_20250719.png" alt="Tokyoite Investment Club" />
+  </div>
+  <h2>Navigation</h2>
+  <a class="nav-link" href="index.html">🏠 Portal</a>
+  <a class="nav-link" href="fx.html">💱 FX Dashboard</a>
+  <a class="nav-link" href="commodities.html">🌾 Commodities</a>
+  <a class="nav-link" href="economics.html">🌐 Economics</a>
+  <a class="nav-link active" href="portfolio.html">📈 Portfolio</a>
+  <a class="nav-link" href="cartas.html">📄 Letters</a>
+  <div class="sidebar-caption">
+    Tokyoite Investment Club<br>
+    Investment Intelligence Platform
+  </div>
+</nav>
+
+<!-- ── Main ─────────────────────────────────── -->
+<div id="main">
+
+  <div id="page-header">
+    <div id="page-header-left">
+      <h1>Portfolio Dashboard</h1>
+      <p>Tokyoite Investment Club – live prices for portfolio holdings</p>
+    </div>
+    <span id="last-update">Updating…</span>
+  </div>
+
+  <!-- Summary stats -->
+  <div>
+    <div class="section-heading">Summary</div>
+    <div id="summary-row">
+      <div class="summary-card">
+        <div class="summary-label">Holdings</div>
+        <div class="summary-value" id="sum-count">10</div>
+        <div class="summary-sub">positions</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Gainers Today</div>
+        <div class="summary-value pos" id="sum-gainers">—</div>
+        <div class="summary-sub">stocks up</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Losers Today</div>
+        <div class="summary-value neg" id="sum-losers">—</div>
+        <div class="summary-sub">stocks down</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Best Performer</div>
+        <div class="summary-value" id="sum-best" style="font-size:14px;padding-top:4px;">—</div>
+        <div class="summary-sub" id="sum-best-sub"></div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Worst Performer</div>
+        <div class="summary-value" id="sum-worst" style="font-size:14px;padding-top:4px;">—</div>
+        <div class="summary-sub" id="sum-worst-sub"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily change chart -->
+  <div>
+    <div class="section-heading">Daily % Change</div>
+    <div class="chart-container">
+      <div id="change-chart" style="height:320px;"></div>
+    </div>
+  </div>
+
+  <!-- Stock price cards -->
+  <div>
+    <div class="section-heading">Holdings</div>
+    <div id="portfolio-grid">
+      <div class="port-skeleton">Loading…</div>
+    </div>
+  </div>
+
+  <div id="footer-note">
+    Data: Yahoo Finance · Prices delayed ~15 min during market hours · For informational purposes only
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+const PORTFOLIO = [
+  { ticker: "SMTO3",  sym: "SMTO3.SA",  currency: "R$" },
+  { ticker: "IGTI3",  sym: "IGTI3.SA",  currency: "R$" },
+  { ticker: "AURE3",  sym: "AURE3.SA",  currency: "R$" },
+  { ticker: "SUZB3",  sym: "SUZB3.SA",  currency: "R$" },
+  { ticker: "ITUB3",  sym: "ITUB3.SA",  currency: "R$" },
+  { ticker: "BERK34", sym: "BERK34.SA", currency: "R$" },
+  { ticker: "MSFT34", sym: "MSFT34.SA", currency: "R$" },
+  { ticker: "BBSE3",  sym: "BBSE3.SA",  currency: "R$" },
+  { ticker: "F1IS34", sym: "F1IS34.SA", currency: "R$" },
+  { ticker: "SLCE3",  sym: "SLCE3.SA",  currency: "R$" },
+];
+
+async function fetchStock(sym) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=5d`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const json = await resp.json();
+  const m = json.chart?.result?.[0]?.meta;
+  if (!m) return null;
+  const price  = m.regularMarketPrice ?? 0;
+  const prev   = m.chartPreviousClose ?? m.previousClose ?? price;
+  const chgAbs = price - prev;
+  const chgPct = prev !== 0 ? (chgAbs / prev) * 100 : 0;
+  return { price, prev, chgAbs, chgPct, name: m.shortName || m.longName || sym };
+}
+
+function fmt(n, dec = 2) {
+  return n.toLocaleString("pt-BR", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+function renderCards(results) {
+  const grid = document.getElementById("portfolio-grid");
+  grid.innerHTML = PORTFOLIO.map((p, i) => {
+    const r = results[i];
+    if (r.status !== "fulfilled" || !r.value) {
+      return `<div class="port-card">
+        <div class="port-ticker">${p.ticker}</div>
+        <div class="port-change" style="color:var(--text-dim)">Unavailable</div>
+      </div>`;
+    }
+    const { price, chgAbs, chgPct, name } = r.value;
+    const dir  = chgPct >= 0 ? "up" : "down";
+    const cls  = chgPct >= 0 ? "pos" : "neg";
+    const sign = chgPct >= 0 ? "+" : "";
+    return `
+      <div class="port-card ${dir}">
+        <div class="port-ticker">${p.ticker}</div>
+        <div class="port-name" title="${name}">${name}</div>
+        <div class="port-price">${p.currency} ${fmt(price)}</div>
+        <div class="port-change ${cls}">${sign}${fmt(chgPct)}%</div>
+        <div class="port-abs">${sign}${p.currency} ${fmt(Math.abs(chgAbs))}</div>
+      </div>`;
+  }).join("");
+}
+
+function renderChart(results) {
+  const data = PORTFOLIO.map((p, i) => {
+    const r = results[i];
+    const pct = (r.status === "fulfilled" && r.value) ? r.value.chgPct : null;
+    return { ticker: p.ticker, pct };
+  }).filter(d => d.pct !== null).sort((a, b) => a.pct - b.pct);
+
+  const colors = data.map(d => d.pct >= 0 ? "#00c853" : "#ff1744");
+
+  Plotly.react("change-chart", [{
+    type: "bar",
+    orientation: "h",
+    x: data.map(d => d.pct),
+    y: data.map(d => d.ticker),
+    text: data.map(d => (d.pct >= 0 ? "+" : "") + d.pct.toFixed(2) + "%"),
+    textposition: "outside",
+    marker: { color: colors },
+    hovertemplate: "<b>%{y}</b><br>%{x:.2f}%<extra></extra>",
+  }], {
+    paper_bgcolor: "#1a1d2e",
+    plot_bgcolor: "#1a1d2e",
+    font: { color: "#e0e0e0", family: "Segoe UI, system-ui, sans-serif", size: 12 },
+    margin: { l: 70, r: 80, t: 10, b: 30 },
+    xaxis: {
+      gridcolor: "#2a2d3e",
+      zerolinecolor: "#8892a4",
+      ticksuffix: "%",
+    },
+    yaxis: { gridcolor: "#2a2d3e" },
+  }, { responsive: true, displayModeBar: false });
+}
+
+function renderSummary(results) {
+  const valid = PORTFOLIO.map((p, i) => {
+    const r = results[i];
+    return (r.status === "fulfilled" && r.value) ? { ticker: p.ticker, ...r.value } : null;
+  }).filter(Boolean);
+
+  const gainers = valid.filter(v => v.chgPct > 0);
+  const losers  = valid.filter(v => v.chgPct < 0);
+  const sorted  = [...valid].sort((a, b) => b.chgPct - a.chgPct);
+  const best    = sorted[0];
+  const worst   = sorted[sorted.length - 1];
+
+  document.getElementById("sum-gainers").textContent = gainers.length;
+  document.getElementById("sum-losers").textContent  = losers.length;
+
+  if (best) {
+    document.getElementById("sum-best").textContent     = best.ticker;
+    document.getElementById("sum-best-sub").textContent = (best.chgPct >= 0 ? "+" : "") + best.chgPct.toFixed(2) + "%";
+    document.getElementById("sum-best-sub").style.color = "#00c853";
+  }
+  if (worst) {
+    document.getElementById("sum-worst").textContent     = worst.ticker;
+    document.getElementById("sum-worst-sub").textContent = (worst.chgPct >= 0 ? "+" : "") + worst.chgPct.toFixed(2) + "%";
+    document.getElementById("sum-worst-sub").style.color = "#ff1744";
+  }
+}
+
+async function loadAll() {
+  const results = await Promise.allSettled(PORTFOLIO.map(p => fetchStock(p.sym)));
+  renderCards(results);
+  renderChart(results);
+  renderSummary(results);
+  const now = new Date();
+  document.getElementById("last-update").textContent =
+    "Updated " + now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+document.addEventListener("DOMContentLoaded", loadAll);
+</script>
+</body>
+</html>
