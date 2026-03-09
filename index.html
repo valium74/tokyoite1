@@ -197,6 +197,52 @@
   @media (max-width: 640px) {
     #top-bar, #portal-main, #footer { padding-left: 20px; padding-right: 20px; }
   }
+
+  /* ── Contact ─────────────────────────────── */
+  #contact-section { display: flex; flex-direction: column; gap: 18px; }
+  #contact-wrapper {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 28px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+  }
+  #contact-info { display: flex; flex-direction: column; gap: 14px; }
+  #contact-info p { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+  .contact-detail {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--accent); font-weight: 600;
+  }
+  .contact-icon { font-size: 16px; }
+  #contact-form { display: flex; flex-direction: column; gap: 14px; }
+  .cf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .cf-group { display: flex; flex-direction: column; gap: 5px; }
+  .cf-group label { font-size: 12px; color: var(--text-dim); font-weight: 600; letter-spacing: 0.04em; }
+  .cf-group input, .cf-group textarea {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 13px;
+    font-family: inherit; padding: 9px 12px; outline: none;
+    transition: border-color 0.15s;
+  }
+  .cf-group input:focus, .cf-group textarea:focus { border-color: var(--accent); }
+  .cf-group textarea { resize: vertical; }
+  #cf-status { font-size: 13px; min-height: 18px; }
+  #cf-status.success { color: var(--green); }
+  #cf-status.error { color: var(--red); }
+  #cf-btn {
+    align-self: flex-start; background: var(--accent); border: none;
+    border-radius: 7px; color: #000; cursor: pointer;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    padding: 10px 24px; transition: opacity 0.15s;
+  }
+  #cf-btn:hover { opacity: 0.88; }
+  #cf-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  @media (max-width: 700px) {
+    #contact-wrapper { grid-template-columns: 1fr; }
+    .cf-row { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -248,6 +294,21 @@
         <div class="feature-link">Open Dashboard →</div>
       </a>
 
+      <a class="feature-card" href="economics.html">
+        <div class="feature-icon">🌐</div>
+        <div class="feature-title">World Economic Data</div>
+        <div class="feature-tags">
+          <span class="tag">GDP Growth</span>
+          <span class="tag">CPI</span>
+          <span class="tag">PMI</span>
+          <span class="tag">10 Economies</span>
+        </div>
+        <div class="feature-desc">
+          Key macroeconomic indicators for the world's major economies — GDP growth, consumer price inflation and manufacturing PMI for the US, EU, China, India, Brazil and more.
+        </div>
+        <div class="feature-link">Open Dashboard →</div>
+      </a>
+
       <a class="feature-card" href="cartas.html">
         <div class="feature-icon">📄</div>
         <div class="feature-title">Cartas aos Cotistas</div>
@@ -271,6 +332,42 @@
     <div class="section-heading">Portfolio – Tokyoite Investment Club</div>
     <div id="portfolio-grid">
       <span class="port-loading">Carregando cotações…</span>
+    </div>
+  </div>
+
+  <!-- Contact -->
+  <div id="contact-section">
+    <div class="section-heading">Fale com o Gestor</div>
+    <div id="contact-wrapper">
+      <div id="contact-info">
+        <p>Entre em contato com a equipe da Tokyoite Capital para dúvidas sobre o fundo, relatórios ou qualquer outro assunto.</p>
+        <div class="contact-detail">
+          <span class="contact-icon">✉</span>
+          <span>tokyoite@valiocapital.com</span>
+        </div>
+      </div>
+      <form id="contact-form" novalidate>
+        <div class="cf-row">
+          <div class="cf-group">
+            <label for="cf-name">Nome</label>
+            <input id="cf-name" type="text" placeholder="Seu nome" required />
+          </div>
+          <div class="cf-group">
+            <label for="cf-email">E-mail</label>
+            <input id="cf-email" type="email" placeholder="seu@email.com" required />
+          </div>
+        </div>
+        <div class="cf-group">
+          <label for="cf-subject">Assunto</label>
+          <input id="cf-subject" type="text" placeholder="Assunto da mensagem" required />
+        </div>
+        <div class="cf-group">
+          <label for="cf-message">Mensagem</label>
+          <textarea id="cf-message" rows="4" placeholder="Escreva sua mensagem aqui..." required></textarea>
+        </div>
+        <div id="cf-status"></div>
+        <button type="submit" id="cf-btn">Enviar Mensagem</button>
+      </form>
     </div>
   </div>
 
@@ -336,6 +433,60 @@ async function loadPortfolio() {
     grid.innerHTML = '<span class="port-loading">Erro ao carregar cotações</span>';
   }
 }
+
+// ── Contact form ──────────────────────────
+// To enable email delivery without opening the mail client:
+// 1. Create a free account at formspree.io
+// 2. Create a form for tokyoite@valiocapital.com
+// 3. Replace "" below with your Formspree form ID (e.g. "xabc1234")
+const FORMSPREE_ID = "";
+
+document.getElementById("contact-form").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const btn    = document.getElementById("cf-btn");
+  const status = document.getElementById("cf-status");
+  const name    = document.getElementById("cf-name").value.trim();
+  const email   = document.getElementById("cf-email").value.trim();
+  const subject = document.getElementById("cf-subject").value.trim();
+  const message = document.getElementById("cf-message").value.trim();
+
+  if (!name || !email || !subject || !message) {
+    status.textContent = "Por favor, preencha todos os campos.";
+    status.className = "error";
+    return;
+  }
+
+  if (FORMSPREE_ID) {
+    btn.disabled = true;
+    btn.textContent = "Enviando…";
+    status.textContent = "";
+    status.className = "";
+    try {
+      const resp = await fetch(`https://formspree.io/f/${FORMSPREE_ID}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ name, email, subject, message }),
+      });
+      if (resp.ok) {
+        status.textContent = "✓ Mensagem enviada com sucesso!";
+        status.className = "success";
+        e.target.reset();
+      } else {
+        throw new Error("Falha no envio");
+      }
+    } catch (err) {
+      status.textContent = "Erro ao enviar. Tente novamente ou use o e-mail direto.";
+      status.className = "error";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Enviar Mensagem";
+    }
+  } else {
+    // Fallback: open mail client with pre-filled content
+    const body = encodeURIComponent(`Nome: ${name}\nE-mail: ${email}\n\n${message}`);
+    window.location.href = `mailto:tokyoite@valiocapital.com?subject=${encodeURIComponent(subject)}&body=${body}`;
+  }
+});
 
 document.addEventListener("DOMContentLoaded", loadPortfolio);
 </script>

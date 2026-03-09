@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Economic Data – Tokyoite</title>
+<script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+<style>
+  :root {
+    --bg: #0e1117;
+    --bg2: #1a1d2e;
+    --bg3: #1e2130;
+    --accent: #29b6f6;
+    --green: #00c853;
+    --red: #ff1744;
+    --yellow: #f9a825;
+    --text: #e0e0e0;
+    --text-dim: #8892a4;
+    --border: #2a2d3e;
+    --sidebar-width: 220px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    display: flex;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── Sidebar ─────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 14px;
+    gap: 18px;
+    z-index: 100;
+  }
+
+  #sidebar-logo { padding: 4px 0 8px; border-bottom: 1px solid var(--border); }
+  #sidebar-logo img { width: 100%; height: auto; display: block; }
+
+  #sidebar h2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-link {
+    display: block;
+    padding: 8px 10px;
+    border-radius: 5px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 13px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .nav-link:hover { background: var(--bg3); color: var(--text); }
+  .nav-link.active { background: var(--bg3); color: var(--accent); font-weight: 600; }
+
+  .sidebar-caption {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    padding: 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-top: auto;
+  }
+
+  /* ── Main content ────────────────────────── */
+  #main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    min-width: 0;
+  }
+
+  /* ── Page header ─────────────────────────── */
+  #page-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  #page-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  #page-header p {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  /* ── Section heading ─────────────────────── */
+  .section-heading {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+
+  /* ── Chart container ─────────────────────── */
+  .chart-container {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  /* ── Indicator tabs ──────────────────────── */
+  #tab-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .tf-btn {
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    letter-spacing: 0.02em;
+  }
+  .tf-btn:hover { background: var(--bg2); color: var(--text); border-color: var(--accent); }
+  .tf-btn.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+  }
+
+  /* ── Country snapshot table ──────────────── */
+  #snapshot-table-wrap {
+    overflow-x: auto;
+  }
+
+  #snapshot-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  #snapshot-table thead tr {
+    background: var(--bg3);
+  }
+  #snapshot-table th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  #snapshot-table th.right { text-align: right; }
+  #snapshot-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    white-space: nowrap;
+  }
+  #snapshot-table td.right { text-align: right; }
+  #snapshot-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+  #snapshot-table tbody tr:hover { background: var(--bg3); }
+
+  .country-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .country-flag { font-size: 18px; line-height: 1; }
+  .country-name { font-size: 13px; color: var(--text); }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+  }
+  .badge-green { background: rgba(0,200,83,0.15); color: var(--green); }
+  .badge-yellow { background: rgba(249,168,37,0.15); color: var(--yellow); }
+  .badge-red { background: rgba(255,23,68,0.15); color: var(--red); }
+  .badge-accent { background: rgba(41,182,246,0.15); color: var(--accent); }
+
+  /* ── Footer note ─────────────────────────── */
+  #data-footer {
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 12px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    line-height: 1.6;
+  }
+
+  /* ── Responsive ──────────────────────────── */
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    #sidebar { width: 100%; min-width: unset; height: auto; position: static; flex-direction: row; flex-wrap: wrap; }
+    #main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────── -->
+<div id="sidebar">
+  <div id="sidebar-logo">
+    <img src="New_tokyoite_logo_20250719.png" alt="Tokyoite Capital" />
+  </div>
+
+  <h2>Navigation</h2>
+  <nav>
+    <a class="nav-link" href="index.html">Portal</a>
+    <a class="nav-link" href="fx.html">FX Dashboard</a>
+    <a class="nav-link" href="commodities.html">Commodities</a>
+    <a class="nav-link active" href="economics.html">Economics</a>
+    <a class="nav-link" href="cartas.html">Cartas aos Cotistas</a>
+  </nav>
+
+  <div class="sidebar-caption">
+    Economic data updated semi-annually. PMI updated monthly.
+  </div>
+</div>
+
+<!-- ── Main ─────────────────────────────────── -->
+<div id="main">
+
+  <!-- Header -->
+  <div id="page-header">
+    <h1>🌐 World Economic Data</h1>
+    <p>GDP Growth &middot; CPI Inflation &middot; Manufacturing PMI &middot; Key Economies</p>
+  </div>
+
+  <!-- Indicator bar chart -->
+  <div>
+    <div class="section-heading">Indicator Comparison</div>
+    <div id="tab-bar">
+      <button class="tf-btn active" data-ind="gdp">📈 GDP Growth</button>
+      <button class="tf-btn" data-ind="cpi">💰 CPI Inflation</button>
+      <button class="tf-btn" data-ind="pmi">🏭 PMI Manufacturing</button>
+    </div>
+    <div style="margin-top:14px;">
+      <div class="chart-container">
+        <div id="chart-indicator" style="height:380px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GDP Historical Trend -->
+  <div>
+    <div class="section-heading">GDP Growth – 5-Year Historical Trend (2020–2024)</div>
+    <div class="chart-container">
+      <div id="chart-hist-gdp" style="height:300px;"></div>
+    </div>
+  </div>
+
+  <!-- Country snapshot table -->
+  <div>
+    <div class="section-heading">Country Snapshot</div>
+    <div class="chart-container" style="padding: 0; overflow: hidden;">
+      <div id="snapshot-table-wrap">
+        <table id="snapshot-table">
+          <thead>
+            <tr>
+              <th>Country</th>
+              <th class="right">GDP Growth %</th>
+              <th class="right">CPI Inflation %</th>
+              <th class="right">PMI Manufacturing</th>
+            </tr>
+          </thead>
+          <tbody id="snapshot-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer note -->
+  <div id="data-footer">
+    Sources: <strong>IMF World Economic Outlook</strong> (GDP, CPI) &middot; <strong>S&amp;P Global</strong> (PMI Manufacturing) &middot; GDP &amp; CPI: 2024 actuals &middot; PMI: Feb 2026
+  </div>
+
+</div><!-- /main -->
+
+<script>
+'use strict';
+
+// ── Data ──────────────────────────────────────
+const COUNTRIES = [
+  { code:"USA", name:"United States",  flag:"🇺🇸", gdp: 2.8,  cpi: 3.0,  pmi: 52.7 },
+  { code:"EUQ", name:"Euro Area",      flag:"🇪🇺", gdp: 1.8,  cpi: 3.6,  pmi: 47.6 },
+  { code:"CHN", name:"China",          flag:"🇨🇳", gdp: 5.0,  cpi: 0.2,  pmi: 50.1 },
+  { code:"IND", name:"India",          flag:"🇮🇳", gdp: 6.5,  cpi: 4.6,  pmi: 56.3 },
+  { code:"BRA", name:"Brazil",         flag:"🇧🇷", gdp: 3.4,  cpi: 4.4,  pmi: 52.1 },
+  { code:"GBR", name:"United Kingdom", flag:"🇬🇧", gdp: 1.1,  cpi: 2.5,  pmi: 46.9 },
+  { code:"JPN", name:"Japan",          flag:"🇯🇵", gdp: 0.1,  cpi: 2.7,  pmi: 48.4 },
+  { code:"CAN", name:"Canada",         flag:"🇨🇦", gdp: 1.6,  cpi: 2.4,  pmi: 48.2 },
+  { code:"AUS", name:"Australia",      flag:"🇦🇺", gdp: 1.0,  cpi: 3.2,  pmi: 50.6 },
+  { code:"KOR", name:"South Korea",    flag:"🇰🇷", gdp: 2.0,  cpi: 2.3,  pmi: 51.0 },
+];
+
+const HIST_GDP = {
+  USA: [-2.1, 6.2, 2.5, 2.9, 2.8],
+  EUQ: [-5.7, 5.3, 3.5, 1.2, 1.8],
+  CHN: [ 2.2, 8.5, 3.0, 5.4, 5.0],
+  IND: [-5.8, 9.7, 7.6, 9.2, 6.5],
+  BRA: [-3.3, 5.1, 3.1, 3.2, 3.4],
+  GBR: [-11.0,8.7, 4.1, 0.4, 1.1],
+  JPN: [-4.1, 2.1, 1.0, 1.2, 0.1],
+  CAN: [-5.3, 5.3, 3.8, 1.5, 1.6],
+  AUS: [-1.8, 5.3, 3.9, 2.1, 1.0],
+  KOR: [-0.7, 4.3, 2.6, 1.6, 2.0],
+};
+const HIST_YEARS = ["2020","2021","2022","2023","2024"];
+
+// Distinct line colours for 10 countries
+const LINE_COLORS = [
+  "#29b6f6","#00c853","#f9a825","#ff1744","#ab47bc",
+  "#ff7043","#26c6da","#9ccc65","#ffa726","#ec407a"
+];
+
+// ── Color helpers ─────────────────────────────
+function gdpColor(v) {
+  if (v >= 3)  return "#00c853";
+  if (v >= 1)  return "#f9a825";
+  return "#ff1744";
+}
+function cpiColor(v) {
+  if (v < 0 || v > 5) return "#ff1744";
+  if (v >= 3)         return "#f9a825";
+  return "#00c853"; // 0–3%
+}
+function pmiColor(v) {
+  if (v >= 52) return "#00c853";
+  if (v >= 50) return "#29b6f6";
+  return "#ff1744";
+}
+
+function badgeClass(colorHex) {
+  if (colorHex === "#00c853") return "badge-green";
+  if (colorHex === "#f9a825") return "badge-yellow";
+  if (colorHex === "#ff1744") return "badge-red";
+  return "badge-accent";
+}
+
+// ── Plotly base layout ────────────────────────
+function baseLayout(extra) {
+  return Object.assign({
+    paper_bgcolor: "transparent",
+    plot_bgcolor:  "transparent",
+    font: { family: "'Segoe UI', system-ui, sans-serif", color: "#e0e0e0", size: 12 },
+    margin: { t: 16, r: 20, b: 60, l: 140 },
+    xaxis: {
+      gridcolor: "#2a2d3e",
+      zerolinecolor: "#2a2d3e",
+      tickfont: { color: "#8892a4", size: 11 },
+    },
+    yaxis: {
+      gridcolor: "#2a2d3e",
+      zerolinecolor: "#3a3d4e",
+      tickfont: { color: "#8892a4", size: 11 },
+    },
+    legend: {
+      bgcolor: "transparent",
+      font: { color: "#8892a4", size: 11 },
+    },
+    hoverlabel: {
+      bgcolor: "#1e2130",
+      bordercolor: "#2a2d3e",
+      font: { color: "#e0e0e0", size: 12 },
+    },
+  }, extra);
+}
+
+// ── Render indicator bar chart ────────────────
+let currentInd = "gdp";
+
+function renderIndicatorChart(ind) {
+  currentInd = ind;
+
+  const config = {
+    gdp: { key: "gdp", label: "GDP Growth (%)", colorFn: gdpColor, refLine: 2,   refLabel: "2% target", fmt: v => v.toFixed(1) + "%" },
+    cpi: { key: "cpi", label: "CPI Inflation (%)", colorFn: cpiColor, refLine: 2,   refLabel: "2% target", fmt: v => v.toFixed(1) + "%" },
+    pmi: { key: "pmi", label: "PMI Manufacturing", colorFn: pmiColor, refLine: 50,  refLabel: "50 neutral", fmt: v => v.toFixed(1) },
+  }[ind];
+
+  // Sort ascending so highest is at top of horizontal bar chart
+  const sorted = [...COUNTRIES].sort((a, b) => a[config.key] - b[config.key]);
+
+  const values  = sorted.map(c => c[config.key]);
+  const labels  = sorted.map(c => c.flag + " " + c.name);
+  const colors  = sorted.map(c => config.colorFn(c[config.key]));
+  const texts   = sorted.map(c => config.fmt(c[config.key]));
+
+  const trace = {
+    type: "bar",
+    orientation: "h",
+    x: values,
+    y: labels,
+    marker: { color: colors, opacity: 0.88 },
+    text: texts,
+    textposition: "outside",
+    textfont: { color: "#e0e0e0", size: 12 },
+    hovertemplate: "<b>%{y}</b><br>" + config.label + ": <b>%{x}</b><extra></extra>",
+    cliponaxis: false,
+  };
+
+  const shapes = [{
+    type: "line",
+    xref: "x", yref: "paper",
+    x0: config.refLine, x1: config.refLine,
+    y0: 0, y1: 1,
+    line: { color: "rgba(255,255,255,0.2)", width: 1.5, dash: "dash" },
+  }];
+
+  const annotations = [{
+    xref: "x", yref: "paper",
+    x: config.refLine, y: 1.02,
+    text: config.refLabel,
+    showarrow: false,
+    font: { color: "rgba(255,255,255,0.35)", size: 10 },
+  }];
+
+  const layout = baseLayout({
+    margin: { t: 30, r: 80, b: 40, l: 150 },
+    xaxis: {
+      title: { text: config.label, font: { color: "#8892a4", size: 11 } },
+      gridcolor: "#2a2d3e",
+      zerolinecolor: "#3a3d4e",
+      tickfont: { color: "#8892a4", size: 11 },
+    },
+    yaxis: {
+      gridcolor: "#2a2d3e",
+      zerolinecolor: "#2a2d3e",
+      tickfont: { color: "#e0e0e0", size: 12 },
+      automargin: true,
+    },
+    shapes,
+    annotations,
+  });
+
+  Plotly.react("chart-indicator", [trace], layout, {
+    responsive: true,
+    displayModeBar: false,
+  });
+}
+
+// ── Render historical GDP trend ───────────────
+function renderHistGDP() {
+  const traces = COUNTRIES.map((c, i) => ({
+    type: "scatter",
+    mode: "lines+markers",
+    name: c.flag + " " + c.name,
+    x: HIST_YEARS,
+    y: HIST_GDP[c.code],
+    line: { color: LINE_COLORS[i], width: 2 },
+    marker: { color: LINE_COLORS[i], size: 6 },
+    hovertemplate: "<b>" + c.flag + " " + c.name + "</b><br>%{x}: <b>%{y:.1f}%</b><extra></extra>",
+  }));
+
+  const layout = baseLayout({
+    margin: { t: 16, r: 20, b: 40, l: 60 },
+    xaxis: {
+      gridcolor: "#2a2d3e",
+      zerolinecolor: "#2a2d3e",
+      tickfont: { color: "#8892a4", size: 11 },
+    },
+    yaxis: {
+      title: { text: "GDP Growth (%)", font: { color: "#8892a4", size: 11 } },
+      gridcolor: "#2a2d3e",
+      zerolinecolor: "#3a3d4e",
+      tickfont: { color: "#8892a4", size: 11 },
+    },
+    legend: {
+      orientation: "h",
+      x: 0, y: -0.18,
+      bgcolor: "transparent",
+      font: { color: "#8892a4", size: 10 },
+    },
+    shapes: [{
+      type: "line",
+      xref: "paper", yref: "y",
+      x0: 0, x1: 1, y0: 0, y1: 0,
+      line: { color: "rgba(255,255,255,0.15)", width: 1, dash: "dot" },
+    }],
+  });
+
+  Plotly.newPlot("chart-hist-gdp", traces, layout, {
+    responsive: true,
+    displayModeBar: false,
+  });
+}
+
+// ── Render snapshot table ─────────────────────
+function renderTable() {
+  // Sort by GDP descending
+  const sorted = [...COUNTRIES].sort((a, b) => b.gdp - a.gdp);
+  const tbody = document.getElementById("snapshot-tbody");
+  tbody.innerHTML = sorted.map(c => {
+    const gClass = badgeClass(gdpColor(c.gdp));
+    const cClass = badgeClass(cpiColor(c.cpi));
+    const pClass = badgeClass(pmiColor(c.pmi));
+    return `
+      <tr>
+        <td>
+          <div class="country-cell">
+            <span class="country-flag">${c.flag}</span>
+            <span class="country-name">${c.name}</span>
+          </div>
+        </td>
+        <td class="right"><span class="badge ${gClass}">${c.gdp.toFixed(1)}%</span></td>
+        <td class="right"><span class="badge ${cClass}">${c.cpi.toFixed(1)}%</span></td>
+        <td class="right"><span class="badge ${pClass}">${c.pmi.toFixed(1)}</span></td>
+      </tr>`;
+  }).join("");
+}
+
+// ── Tab buttons ───────────────────────────────
+document.querySelectorAll(".tf-btn").forEach(btn => {
+  btn.addEventListener("click", function() {
+    document.querySelectorAll(".tf-btn").forEach(b => b.classList.remove("active"));
+    this.classList.add("active");
+    renderIndicatorChart(this.dataset.ind);
+  });
+});
+
+// ── Init ──────────────────────────────────────
+document.addEventListener("DOMContentLoaded", function() {
+  renderIndicatorChart("gdp");
+  renderHistGDP();
+  renderTable();
+});
+</script>
+</body>
+</html>
