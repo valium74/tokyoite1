@@ -481,8 +481,21 @@ async function fetchHistory(sym, range) {
   if (!r) throw new Error("No chart data returned");
   const ts = r.timestamp;
   const q  = r.indicators.quote[0];
-  const dates = ts.map(t => new Date(t * 1000).toISOString().split("T")[0]);
-  return { dates, open: q.open, high: q.high, low: q.low, close: q.close, volume: q.volume };
+
+  // Filter out rows where any OHLCV value is null (gaps in data)
+  const dates = [], open = [], high = [], low = [], close = [], volume = [];
+  ts.forEach((t, i) => {
+    if (q.open[i] == null || q.high[i] == null || q.low[i] == null || q.close[i] == null) return;
+    dates.push(new Date(t * 1000).toISOString().split("T")[0]);
+    open.push(q.open[i]);
+    high.push(q.high[i]);
+    low.push(q.low[i]);
+    close.push(q.close[i]);
+    volume.push(q.volume[i] ?? 0);
+  });
+
+  if (dates.length === 0) throw new Error("No valid OHLCV data");
+  return { dates, open, high, low, close, volume };
 }
 
 /* ═══════════════════════════════════════════
@@ -574,18 +587,21 @@ async function loadChart() {
   const chartEl   = document.getElementById("plotly-chart");
   loadingEl.style.display = "flex";
   loadingEl.innerHTML = '<div class="spinner"></div> Loading chart data…';
-  chartEl.style.display = "none";
+  // Keep chartEl visible so Plotly can measure its dimensions
+  chartEl.style.visibility = "hidden";
+  chartEl.style.display = "block";
 
   try {
     const data = await fetchHistory(c.sym, state.range);
     renderChart(data, c);
-    chartEl.style.display = "block";
   } catch (e) {
     console.error("Chart error:", e);
     loadingEl.innerHTML = `<span style="color:var(--red)">Chart unavailable: ${e.message}</span>`;
+    chartEl.style.visibility = "hidden";
     return;
   }
   loadingEl.style.display = "none";
+  chartEl.style.visibility = "visible";
 }
 
 function renderChart({ dates, open, high, low, close, volume }, comm) {
