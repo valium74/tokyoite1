@@ -65,4 +65,14 @@ python3 -m http.server 8000
 
 ## Deployment
 
-Serve `index.html` from any static host (Nginx, S3, GitHub Pages, Vercel, etc.). No server-side processing needed.
+Hosted on **AWS Amplify** — app name `tokyoite1`, connected to GitHub repo `https://github.com/valium74/tokyoite1`.
+
+Deployments are triggered automatically by pushing to the `main` branch:
+
+```bash
+git add <files>
+git commit -m "your message"
+git push origin main
+```
+
+No build step — Amplify serves the static files directly.
