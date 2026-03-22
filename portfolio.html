@@ -216,6 +216,28 @@
   .summary-value { font-family: 'Courier New', monospace; font-size: 20px; font-weight: 700; color: var(--text); }
   .summary-sub { font-size: 11px; color: var(--text-dim); }
 
+  /* ── Period toggle ───────────────────────── */
+  .period-bar {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .period-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .period-btn:hover { color: var(--text); border-color: var(--accent); }
+  .period-btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
+
   /* ── Footer ──────────────────────────────── */
   #footer-note {
     font-size: 11px;
@@ -288,9 +310,18 @@
     </div>
   </div>
 
-  <!-- Daily change chart -->
+  <!-- Period change chart -->
   <div>
-    <div class="section-heading">Daily % Change</div>
+    <div class="section-heading" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span id="chart-heading">Daily % Change</span>
+      <div class="period-bar">
+        <button class="period-btn active" data-period="daily">Daily</button>
+        <button class="period-btn" data-period="weekly">Weekly</button>
+        <button class="period-btn" data-period="monthly">Monthly</button>
+        <button class="period-btn" data-period="ytd">YTD</button>
+        <button class="period-btn" data-period="12m">12 Months</button>
+      </div>
+    </div>
     <div class="chart-container">
       <div id="change-chart" style="height:320px;"></div>
     </div>
@@ -328,6 +359,21 @@ const PORTFOLIO = [
   { ticker: "SLCE3",  currency: "R$" },
 ];
 
+// Maps period key → brapi range param (null = use daily fields)
+const PERIOD_CONFIG = {
+  daily:   { range: null,  label: "Daily % Change",    summaryLabel: "Today" },
+  weekly:  { range: "5d",  label: "Weekly % Change",   summaryLabel: "Week" },
+  monthly: { range: "1mo", label: "Monthly % Change",  summaryLabel: "Month" },
+  ytd:     { range: "ytd", label: "YTD % Change",      summaryLabel: "YTD" },
+  "12m":   { range: "1y",  label: "12-Month % Change", summaryLabel: "12 Months" },
+};
+
+let activePeriod = "daily";
+let cachedByTicker = {};           // price + daily change data
+const periodCache = {};            // periodCache[period][ticker] = { pct, absChange }
+
+// ── API ───────────────────────────────────────
+
 async function fetchOne(ticker) {
   const url = `https://brapi.dev/api/quote/${ticker}?token=${BRAPI_TOKEN}`;
   const resp = await fetch(url);
@@ -352,39 +398,95 @@ async function fetchAll() {
   return byTicker;
 }
 
+async function fetchPeriodChange(ticker, range) {
+  const url = `https://brapi.dev/api/quote/${ticker}?range=${range}&interval=1d&token=${BRAPI_TOKEN}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const json = await resp.json();
+  const hist = json.results?.[0]?.historicalDataPrice;
+  if (!hist || hist.length < 2) return null;
+  const startClose = hist[0].close;
+  const endClose   = hist[hist.length - 1].close;
+  if (!startClose || !endClose) return null;
+  const pct       = ((endClose - startClose) / startClose) * 100;
+  const absChange = endClose - startClose;
+  return { pct, absChange };
+}
+
+async function fetchAllPeriod(range) {
+  const settled = await Promise.allSettled(PORTFOLIO.map(p => fetchPeriodChange(p.ticker, range)));
+  const result = {};
+  PORTFOLIO.forEach((p, i) => {
+    const r = settled[i];
+    if (r.status === "fulfilled" && r.value) result[p.ticker] = r.value;
+  });
+  return result;
+}
+
+// Returns { ticker: { pct, absChange } } for the given period
+async function getChgData(period) {
+  if (periodCache[period]) return periodCache[period];
+
+  if (period === "daily") {
+    const data = {};
+    PORTFOLIO.forEach(p => {
+      const r = cachedByTicker[p.ticker];
+      if (r) data[p.ticker] = { pct: r.chgPct, absChange: r.chgAbs };
+    });
+    periodCache[period] = data;
+    return data;
+  }
+
+  const range = PERIOD_CONFIG[period].range;
+  const data  = await fetchAllPeriod(range);
+  periodCache[period] = data;
+  return data;
+}
+
+// ── Helpers ───────────────────────────────────
+
 function fmt(n, dec = 2) {
   return n.toLocaleString("pt-BR", { minimumFractionDigits: dec, maximumFractionDigits: dec });
 }
 
-function renderCards(byTicker) {
+// ── Render ────────────────────────────────────
+
+function renderCards(chgData) {
   const grid = document.getElementById("portfolio-grid");
   grid.innerHTML = PORTFOLIO.map(p => {
-    const r = byTicker[p.ticker];
-    if (!r) {
+    const base = cachedByTicker[p.ticker];
+    const chg  = chgData[p.ticker];
+    if (!base) {
       return `<div class="port-card">
         <div class="port-ticker">${p.ticker}</div>
         <div class="port-change" style="color:var(--text-dim)">Unavailable</div>
       </div>`;
     }
-    const { price, chgAbs, chgPct, name } = r;
-    const dir  = chgPct >= 0 ? "up" : "down";
-    const cls  = chgPct >= 0 ? "pos" : "neg";
-    const sign = chgPct >= 0 ? "+" : "";
+    const { price, name } = base;
+    const pct    = chg?.pct    ?? null;
+    const absChg = chg?.absChange ?? null;
+    const dir    = pct == null ? "" : (pct >= 0 ? "up" : "down");
+    const cls    = pct == null ? "" : (pct >= 0 ? "pos" : "neg");
+    const sign   = pct != null && pct >= 0 ? "+" : "";
+    const pctStr = pct != null ? `<div class="port-change ${cls}">${sign}${fmt(pct)}%</div>` : `<div class="port-change" style="color:var(--text-dim)">—</div>`;
+    const absStr = absChg != null
+      ? `<div class="port-abs">${sign}${p.currency} ${fmt(Math.abs(absChg))}</div>`
+      : "";
     return `
       <div class="port-card ${dir}">
         <div class="port-ticker">${p.ticker}</div>
         <div class="port-name" title="${name}">${name}</div>
         <div class="port-price">${p.currency} ${fmt(price)}</div>
-        <div class="port-change ${cls}">${sign}${fmt(chgPct)}%</div>
-        <div class="port-abs">${sign}${p.currency} ${fmt(Math.abs(chgAbs))}</div>
+        ${pctStr}
+        ${absStr}
       </div>`;
   }).join("");
 }
 
-function renderChart(byTicker) {
+function renderChart(chgData) {
   const data = PORTFOLIO.map(p => {
-    const r = byTicker[p.ticker];
-    return r ? { ticker: p.ticker, pct: r.chgPct } : null;
+    const chg = chgData[p.ticker];
+    return chg ? { ticker: p.ticker, pct: chg.pct } : null;
   }).filter(Boolean).sort((a, b) => a.pct - b.pct);
 
   const colors = data.map(d => d.pct >= 0 ? "#00c853" : "#ff1744");
@@ -403,48 +505,79 @@ function renderChart(byTicker) {
     plot_bgcolor: "#1a1d2e",
     font: { color: "#e0e0e0", family: "Segoe UI, system-ui, sans-serif", size: 12 },
     margin: { l: 70, r: 80, t: 10, b: 30 },
-    xaxis: {
-      gridcolor: "#2a2d3e",
-      zerolinecolor: "#8892a4",
-      ticksuffix: "%",
-    },
+    xaxis: { gridcolor: "#2a2d3e", zerolinecolor: "#8892a4", ticksuffix: "%" },
     yaxis: { gridcolor: "#2a2d3e" },
   }, { responsive: true, displayModeBar: false });
 }
 
-function renderSummary(byTicker) {
+function renderSummary(chgData) {
+  const cfg   = PERIOD_CONFIG[activePeriod];
   const valid = PORTFOLIO.map(p => {
-    const r = byTicker[p.ticker];
-    return r ? { ticker: p.ticker, ...r } : null;
+    const chg = chgData[p.ticker];
+    return chg ? { ticker: p.ticker, pct: chg.pct } : null;
   }).filter(Boolean);
 
-  const gainers = valid.filter(v => v.chgPct > 0);
-  const losers  = valid.filter(v => v.chgPct < 0);
-  const sorted  = [...valid].sort((a, b) => b.chgPct - a.chgPct);
+  const gainers = valid.filter(v => v.pct > 0);
+  const losers  = valid.filter(v => v.pct < 0);
+  const sorted  = [...valid].sort((a, b) => b.pct - a.pct);
   const best    = sorted[0];
   const worst   = sorted[sorted.length - 1];
+
+  // Update summary label to reflect period
+  document.querySelector("#sum-gainers").closest(".summary-card").querySelector(".summary-label").textContent =
+    `Gainers (${cfg.summaryLabel})`;
+  document.querySelector("#sum-losers").closest(".summary-card").querySelector(".summary-label").textContent =
+    `Losers (${cfg.summaryLabel})`;
 
   document.getElementById("sum-gainers").textContent = gainers.length;
   document.getElementById("sum-losers").textContent  = losers.length;
 
   if (best) {
     document.getElementById("sum-best").textContent     = best.ticker;
-    document.getElementById("sum-best-sub").textContent = (best.chgPct >= 0 ? "+" : "") + best.chgPct.toFixed(2) + "%";
+    document.getElementById("sum-best-sub").textContent = (best.pct >= 0 ? "+" : "") + best.pct.toFixed(2) + "%";
     document.getElementById("sum-best-sub").style.color = "#00c853";
   }
   if (worst) {
     document.getElementById("sum-worst").textContent     = worst.ticker;
-    document.getElementById("sum-worst-sub").textContent = (worst.chgPct >= 0 ? "+" : "") + worst.chgPct.toFixed(2) + "%";
+    document.getElementById("sum-worst-sub").textContent = (worst.pct >= 0 ? "+" : "") + worst.pct.toFixed(2) + "%";
     document.getElementById("sum-worst-sub").style.color = "#ff1744";
   }
 }
 
+async function applyPeriod(period) {
+  activePeriod = period;
+  document.getElementById("chart-heading").textContent = PERIOD_CONFIG[period].label;
+  document.querySelectorAll(".period-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.period === period);
+  });
+
+  // Show loading indicator on chart if period data not yet cached
+  if (!periodCache[period] && period !== "daily") {
+    document.getElementById("change-chart").style.opacity = "0.4";
+  }
+
+  const chgData = await getChgData(period);
+  document.getElementById("change-chart").style.opacity = "1";
+
+  renderCards(chgData);
+  renderChart(chgData);
+  renderSummary(chgData);
+}
+
+// ── Init ──────────────────────────────────────
+
 async function loadAll() {
   try {
-    const byTicker = await fetchAll();
-    renderCards(byTicker);
-    renderChart(byTicker);
-    renderSummary(byTicker);
+    cachedByTicker = await fetchAll();
+    // Pre-populate daily cache
+    periodCache["daily"] = {};
+    PORTFOLIO.forEach(p => {
+      const r = cachedByTicker[p.ticker];
+      if (r) periodCache["daily"][p.ticker] = { pct: r.chgPct, absChange: r.chgAbs };
+    });
+
+    await applyPeriod(activePeriod);
+
     const now = new Date();
     document.getElementById("last-update").textContent =
       "Updated " + now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -456,7 +589,12 @@ async function loadAll() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", loadAll);
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".period-btn").forEach(btn => {
+    btn.addEventListener("click", () => applyPeriod(btn.dataset.period));
+  });
+  loadAll();
+});
 </script>
 </body>
 </html>
