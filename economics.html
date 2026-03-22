@@ -269,7 +269,7 @@
   <!-- Header -->
   <div id="page-header">
     <h1>🌐 World Economic Data</h1>
-    <p>GDP Growth &middot; CPI Inflation &middot; Manufacturing PMI &middot; Key Economies</p>
+    <p>GDP &middot; CPI &middot; PPI &middot; Interest Rates &middot; Bond Yields &middot; PMI &middot; Key Economies</p>
   </div>
 
   <!-- Indicator bar chart -->
@@ -278,7 +278,13 @@
     <div id="tab-bar">
       <button class="tf-btn active" data-ind="gdp">📈 GDP Growth</button>
       <button class="tf-btn" data-ind="cpi">💰 CPI Inflation</button>
-      <button class="tf-btn" data-ind="pmi">🏭 PMI Manufacturing</button>
+      <button class="tf-btn" data-ind="ppi">📦 PPI</button>
+      <button class="tf-btn" data-ind="rate">🏦 Policy Rate</button>
+      <button class="tf-btn" data-ind="realrate">💹 Real Rate</button>
+      <button class="tf-btn" data-ind="yield10y">📊 10Y Bond Yield</button>
+      <button class="tf-btn" data-ind="pmi">🏭 Mfg PMI</button>
+      <button class="tf-btn" data-ind="pmisvc">🛎️ Services PMI</button>
+      <button class="tf-btn" data-ind="pmicomp">🔀 Composite PMI</button>
     </div>
     <div style="margin-top:14px;">
       <div class="chart-container">
@@ -317,7 +323,7 @@
 
   <!-- Footer note -->
   <div id="data-footer">
-    Sources: <strong>IMF World Economic Outlook</strong> (GDP, CPI) &middot; <strong>S&amp;P Global</strong> (PMI Manufacturing) &middot; GDP &amp; CPI: 2024 actuals &middot; PMI: Feb 2026
+    Sources: <strong>IMF World Economic Outlook</strong> (GDP, CPI) &middot; <strong>S&amp;P Global / HSBC</strong> (PMI) &middot; <strong>Central Banks / Bloomberg</strong> (Policy Rates, 10Y Yields, PPI) &middot; GDP &amp; CPI: 2024 actuals &middot; PMI &amp; rates: Mar 2026 &middot; Real Rate ≈ Policy Rate − CPI
   </div>
 
 </div><!-- /main -->
@@ -327,16 +333,18 @@
 
 // ── Data ──────────────────────────────────────
 const COUNTRIES = [
-  { code:"USA", name:"United States",  flag:"🇺🇸", gdp: 2.8,  cpi: 3.0,  pmi: 52.7 },
-  { code:"EUQ", name:"Euro Area",      flag:"🇪🇺", gdp: 1.8,  cpi: 3.6,  pmi: 47.6 },
-  { code:"CHN", name:"China",          flag:"🇨🇳", gdp: 5.0,  cpi: 0.2,  pmi: 50.1 },
-  { code:"IND", name:"India",          flag:"🇮🇳", gdp: 6.5,  cpi: 4.6,  pmi: 56.3 },
-  { code:"BRA", name:"Brazil",         flag:"🇧🇷", gdp: 3.4,  cpi: 4.4,  pmi: 52.1 },
-  { code:"GBR", name:"United Kingdom", flag:"🇬🇧", gdp: 1.1,  cpi: 2.5,  pmi: 46.9 },
-  { code:"JPN", name:"Japan",          flag:"🇯🇵", gdp: 0.1,  cpi: 2.7,  pmi: 48.4 },
-  { code:"CAN", name:"Canada",         flag:"🇨🇦", gdp: 1.6,  cpi: 2.4,  pmi: 48.2 },
-  { code:"AUS", name:"Australia",      flag:"🇦🇺", gdp: 1.0,  cpi: 3.2,  pmi: 50.6 },
-  { code:"KOR", name:"South Korea",    flag:"🇰🇷", gdp: 2.0,  cpi: 2.3,  pmi: 51.0 },
+  // gdp/cpi: 2024 actuals · pmi/ppiSvc/pmiComp: Feb 2026 · ppi: Jan 2026 YoY · rate/yield10y: Mar 2026
+  // realRate ≈ policy rate − CPI
+  { code:"USA", name:"United States",  flag:"🇺🇸", gdp: 2.8, cpi: 3.0, pmi: 52.7, ppi:  3.5, rate:  4.50, yield10y:  4.30, realRate:  1.5, pmiSvc: 53.5, pmiComp: 52.7 },
+  { code:"EUQ", name:"Euro Area",      flag:"🇪🇺", gdp: 1.8, cpi: 3.6, pmi: 47.6, ppi:  1.0, rate:  2.75, yield10y:  2.40, realRate: -0.9, pmiSvc: 50.6, pmiComp: 50.2 },
+  { code:"CHN", name:"China",          flag:"🇨🇳", gdp: 5.0, cpi: 0.2, pmi: 50.1, ppi: -2.2, rate:  3.10, yield10y:  1.70, realRate:  2.9, pmiSvc: 51.4, pmiComp: 51.1 },
+  { code:"IND", name:"India",          flag:"🇮🇳", gdp: 6.5, cpi: 4.6, pmi: 56.3, ppi:  3.5, rate:  6.25, yield10y:  6.70, realRate:  1.7, pmiSvc: 59.0, pmiComp: 57.9 },
+  { code:"BRA", name:"Brazil",         flag:"🇧🇷", gdp: 3.4, cpi: 4.4, pmi: 52.1, ppi:  5.0, rate: 13.25, yield10y: 13.50, realRate:  8.9, pmiSvc: 54.4, pmiComp: 53.4 },
+  { code:"GBR", name:"United Kingdom", flag:"🇬🇧", gdp: 1.1, cpi: 2.5, pmi: 46.9, ppi:  0.1, rate:  4.75, yield10y:  4.50, realRate:  2.3, pmiSvc: 51.0, pmiComp: 50.5 },
+  { code:"JPN", name:"Japan",          flag:"🇯🇵", gdp: 0.1, cpi: 2.7, pmi: 48.4, ppi:  4.0, rate:  0.50, yield10y:  1.50, realRate: -2.2, pmiSvc: 53.7, pmiComp: 51.6 },
+  { code:"CAN", name:"Canada",         flag:"🇨🇦", gdp: 1.6, cpi: 2.4, pmi: 48.2, ppi:  1.5, rate:  3.25, yield10y:  3.40, realRate:  0.9, pmiSvc: 46.6, pmiComp: 47.2 },
+  { code:"AUS", name:"Australia",      flag:"🇦🇺", gdp: 1.0, cpi: 3.2, pmi: 50.6, ppi:  1.7, rate:  4.10, yield10y:  4.30, realRate:  0.9, pmiSvc: 51.2, pmiComp: 51.0 },
+  { code:"KOR", name:"South Korea",    flag:"🇰🇷", gdp: 2.0, cpi: 2.3, pmi: 51.0, ppi:  1.2, rate:  3.00, yield10y:  3.00, realRate:  0.7, pmiSvc: 50.1, pmiComp: 50.3 },
 ];
 
 const HIST_GDP = {
@@ -374,6 +382,30 @@ function pmiColor(v) {
   if (v >= 52) return "#00c853";
   if (v >= 50) return "#29b6f6";
   return "#ff1744";
+}
+function ppiColor(v) {
+  if (v < 0)   return "#ff1744"; // deflation risk
+  if (v <= 3)  return "#00c853"; // healthy
+  if (v <= 6)  return "#f9a825"; // elevated
+  return "#ff1744";              // too high
+}
+function rateColor(v) {
+  if (v <= 2)   return "#29b6f6"; // very accommodative
+  if (v <= 6)   return "#00c853"; // normal range
+  if (v <= 10)  return "#f9a825"; // elevated
+  return "#ff1744";               // very high
+}
+function yield10yColor(v) {
+  if (v <= 2)   return "#29b6f6";
+  if (v <= 5)   return "#00c853";
+  if (v <= 8)   return "#f9a825";
+  return "#ff1744";
+}
+function realRateColor(v) {
+  if (v < -1)  return "#ff1744"; // deeply negative — financial repression
+  if (v < 0)   return "#f9a825"; // mildly negative
+  if (v <= 3)  return "#00c853"; // healthy positive
+  return "#f9a825";              // very restrictive
 }
 
 function badgeClass(colorHex) {
@@ -419,9 +451,15 @@ function renderIndicatorChart(ind) {
   currentInd = ind;
 
   const config = {
-    gdp: { key: "gdp", label: "GDP Growth (%)", colorFn: gdpColor, refLine: 2,   refLabel: "2% target", fmt: v => v.toFixed(1) + "%" },
-    cpi: { key: "cpi", label: "CPI Inflation (%)", colorFn: cpiColor, refLine: 2,   refLabel: "2% target", fmt: v => v.toFixed(1) + "%" },
-    pmi: { key: "pmi", label: "PMI Manufacturing", colorFn: pmiColor, refLine: 50,  refLabel: "50 neutral", fmt: v => v.toFixed(1) },
+    gdp:      { key: "gdp",      label: "GDP Growth (%)",           colorFn: gdpColor,      refLine: 2,   refLabel: "2% target",   fmt: v => v.toFixed(1) + "%" },
+    cpi:      { key: "cpi",      label: "CPI Inflation (% YoY)",    colorFn: cpiColor,      refLine: 2,   refLabel: "2% target",   fmt: v => v.toFixed(1) + "%" },
+    ppi:      { key: "ppi",      label: "PPI (% YoY)",              colorFn: ppiColor,      refLine: 2,   refLabel: "2% target",   fmt: v => v.toFixed(1) + "%" },
+    rate:     { key: "rate",     label: "Central Bank Policy Rate (%)", colorFn: rateColor,  refLine: 2,   refLabel: "2% neutral",  fmt: v => v.toFixed(2) + "%" },
+    realrate: { key: "realRate", label: "Real Interest Rate (%)",   colorFn: realRateColor, refLine: 0,   refLabel: "0% neutral",  fmt: v => v.toFixed(1) + "%" },
+    yield10y: { key: "yield10y", label: "10Y Gov't Bond Yield (%)", colorFn: yield10yColor, refLine: 3,   refLabel: "3% reference",fmt: v => v.toFixed(2) + "%" },
+    pmi:      { key: "pmi",      label: "Manufacturing PMI",        colorFn: pmiColor,      refLine: 50,  refLabel: "50 neutral",  fmt: v => v.toFixed(1) },
+    pmisvc:   { key: "pmiSvc",   label: "Services PMI",             colorFn: pmiColor,      refLine: 50,  refLabel: "50 neutral",  fmt: v => v.toFixed(1) },
+    pmicomp:  { key: "pmiComp",  label: "Composite PMI",            colorFn: pmiColor,      refLine: 50,  refLabel: "50 neutral",  fmt: v => v.toFixed(1) },
   }[ind];
 
   // Sort ascending so highest is at top of horizontal bar chart
