@@ -318,8 +318,8 @@
         <button class="period-btn active" data-period="daily">Daily</button>
         <button class="period-btn" data-period="weekly">Weekly</button>
         <button class="period-btn" data-period="monthly">Monthly</button>
+        <button class="period-btn" data-period="3m">3 Months</button>
         <button class="period-btn" data-period="ytd">YTD</button>
-        <button class="period-btn" data-period="12m">12 Months</button>
       </div>
     </div>
     <div class="chart-container">
@@ -359,13 +359,14 @@ const PORTFOLIO = [
   { ticker: "SLCE3",  currency: "R$" },
 ];
 
-// Maps period key → brapi range param (null = use daily fields)
+// Maps period key → brapi range param (null = use daily fields, "ytd" uses 3mo filtered)
+// Free plan supports: 1d, 5d, 1mo, 3mo only
 const PERIOD_CONFIG = {
   daily:   { range: null,  label: "Daily % Change",    summaryLabel: "Today" },
   weekly:  { range: "5d",  label: "Weekly % Change",   summaryLabel: "Week" },
   monthly: { range: "1mo", label: "Monthly % Change",  summaryLabel: "Month" },
-  ytd:     { range: "ytd", label: "YTD % Change",      summaryLabel: "YTD" },
-  "12m":   { range: "1y",  label: "12-Month % Change", summaryLabel: "12 Months" },
+  "3m":    { range: "3mo", label: "3-Month % Change",  summaryLabel: "3 Months" },
+  ytd:     { range: "3mo", label: "YTD % Change",      summaryLabel: "YTD" },  // filtered client-side
 };
 
 let activePeriod = "daily";
@@ -398,13 +399,19 @@ async function fetchAll() {
   return byTicker;
 }
 
-async function fetchPeriodChange(ticker, range) {
+async function fetchPeriodChange(ticker, range, filterFromJan1 = false) {
   const url = `https://brapi.dev/api/quote/${ticker}?range=${range}&interval=1d&token=${BRAPI_TOKEN}`;
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   const json = await resp.json();
-  const hist = json.results?.[0]?.historicalDataPrice;
+  if (json.error) throw new Error(json.message);
+  let hist = json.results?.[0]?.historicalDataPrice;
   if (!hist || hist.length < 2) return null;
+  if (filterFromJan1) {
+    const jan1 = new Date(new Date().getFullYear(), 0, 1).getTime() / 1000;
+    hist = hist.filter(h => h.date >= jan1);
+    if (hist.length < 2) return null;
+  }
   const startClose = hist[0].close;
   const endClose   = hist[hist.length - 1].close;
   if (!startClose || !endClose) return null;
@@ -413,8 +420,8 @@ async function fetchPeriodChange(ticker, range) {
   return { pct, absChange };
 }
 
-async function fetchAllPeriod(range) {
-  const settled = await Promise.allSettled(PORTFOLIO.map(p => fetchPeriodChange(p.ticker, range)));
+async function fetchAllPeriod(range, filterFromJan1 = false) {
+  const settled = await Promise.allSettled(PORTFOLIO.map(p => fetchPeriodChange(p.ticker, range, filterFromJan1)));
   const result = {};
   PORTFOLIO.forEach((p, i) => {
     const r = settled[i];
@@ -438,7 +445,7 @@ async function getChgData(period) {
   }
 
   const range = PERIOD_CONFIG[period].range;
-  const data  = await fetchAllPeriod(range);
+  const data  = await fetchAllPeriod(range, period === "ytd");
   periodCache[period] = data;
   return data;
 }
