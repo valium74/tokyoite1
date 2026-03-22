@@ -313,48 +313,53 @@
 <script>
 'use strict';
 
+const BRAPI_TOKEN = "8xKH2WEhELorHxbMS85kKd";
+
 const PORTFOLIO = [
-  { ticker: "SMTO3",  sym: "SMTO3.SA",  currency: "R$" },
-  { ticker: "IGTI3",  sym: "IGTI3.SA",  currency: "R$" },
-  { ticker: "AURE3",  sym: "AURE3.SA",  currency: "R$" },
-  { ticker: "SUZB3",  sym: "SUZB3.SA",  currency: "R$" },
-  { ticker: "ITUB3",  sym: "ITUB3.SA",  currency: "R$" },
-  { ticker: "BERK34", sym: "BERK34.SA", currency: "R$" },
-  { ticker: "MSFT34", sym: "MSFT34.SA", currency: "R$" },
-  { ticker: "BBSE3",  sym: "BBSE3.SA",  currency: "R$" },
-  { ticker: "F1IS34", sym: "F1IS34.SA", currency: "R$" },
-  { ticker: "SLCE3",  sym: "SLCE3.SA",  currency: "R$" },
+  { ticker: "SMTO3",  currency: "R$" },
+  { ticker: "IGTI3",  currency: "R$" },
+  { ticker: "AURE3",  currency: "R$" },
+  { ticker: "SUZB3",  currency: "R$" },
+  { ticker: "ITUB3",  currency: "R$" },
+  { ticker: "BERK34", currency: "R$" },
+  { ticker: "MSFT34", currency: "R$" },
+  { ticker: "BBSE3",  currency: "R$" },
+  { ticker: "F1IS34", currency: "R$" },
+  { ticker: "SLCE3",  currency: "R$" },
 ];
 
-async function fetchStock(sym) {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=5d`;
+async function fetchAll() {
+  const tickers = PORTFOLIO.map(p => p.ticker).join(",");
+  const url = `https://brapi.dev/api/quote/${tickers}?token=${BRAPI_TOKEN}`;
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   const json = await resp.json();
-  const m = json.chart?.result?.[0]?.meta;
-  if (!m) return null;
-  const price  = m.regularMarketPrice ?? 0;
-  const prev   = m.chartPreviousClose ?? m.previousClose ?? price;
-  const chgAbs = price - prev;
-  const chgPct = prev !== 0 ? (chgAbs / prev) * 100 : 0;
-  return { price, prev, chgAbs, chgPct, name: m.shortName || m.longName || sym };
+  const byTicker = {};
+  for (const r of json.results ?? []) {
+    const price  = r.regularMarketPrice ?? 0;
+    const prev   = r.regularMarketPreviousClose ?? price;
+    const chgAbs = r.regularMarketChange ?? (price - prev);
+    const chgPct = r.regularMarketChangePercent ?? (prev !== 0 ? (chgAbs / prev) * 100 : 0);
+    byTicker[r.symbol] = { price, prev, chgAbs, chgPct, name: r.shortName || r.longName || r.symbol };
+  }
+  return byTicker;
 }
 
 function fmt(n, dec = 2) {
   return n.toLocaleString("pt-BR", { minimumFractionDigits: dec, maximumFractionDigits: dec });
 }
 
-function renderCards(results) {
+function renderCards(byTicker) {
   const grid = document.getElementById("portfolio-grid");
-  grid.innerHTML = PORTFOLIO.map((p, i) => {
-    const r = results[i];
-    if (r.status !== "fulfilled" || !r.value) {
+  grid.innerHTML = PORTFOLIO.map(p => {
+    const r = byTicker[p.ticker];
+    if (!r) {
       return `<div class="port-card">
         <div class="port-ticker">${p.ticker}</div>
         <div class="port-change" style="color:var(--text-dim)">Unavailable</div>
       </div>`;
     }
-    const { price, chgAbs, chgPct, name } = r.value;
+    const { price, chgAbs, chgPct, name } = r;
     const dir  = chgPct >= 0 ? "up" : "down";
     const cls  = chgPct >= 0 ? "pos" : "neg";
     const sign = chgPct >= 0 ? "+" : "";
@@ -369,12 +374,11 @@ function renderCards(results) {
   }).join("");
 }
 
-function renderChart(results) {
-  const data = PORTFOLIO.map((p, i) => {
-    const r = results[i];
-    const pct = (r.status === "fulfilled" && r.value) ? r.value.chgPct : null;
-    return { ticker: p.ticker, pct };
-  }).filter(d => d.pct !== null).sort((a, b) => a.pct - b.pct);
+function renderChart(byTicker) {
+  const data = PORTFOLIO.map(p => {
+    const r = byTicker[p.ticker];
+    return r ? { ticker: p.ticker, pct: r.chgPct } : null;
+  }).filter(Boolean).sort((a, b) => a.pct - b.pct);
 
   const colors = data.map(d => d.pct >= 0 ? "#00c853" : "#ff1744");
 
@@ -401,10 +405,10 @@ function renderChart(results) {
   }, { responsive: true, displayModeBar: false });
 }
 
-function renderSummary(results) {
-  const valid = PORTFOLIO.map((p, i) => {
-    const r = results[i];
-    return (r.status === "fulfilled" && r.value) ? { ticker: p.ticker, ...r.value } : null;
+function renderSummary(byTicker) {
+  const valid = PORTFOLIO.map(p => {
+    const r = byTicker[p.ticker];
+    return r ? { ticker: p.ticker, ...r } : null;
   }).filter(Boolean);
 
   const gainers = valid.filter(v => v.chgPct > 0);
@@ -429,13 +433,20 @@ function renderSummary(results) {
 }
 
 async function loadAll() {
-  const results = await Promise.allSettled(PORTFOLIO.map(p => fetchStock(p.sym)));
-  renderCards(results);
-  renderChart(results);
-  renderSummary(results);
-  const now = new Date();
-  document.getElementById("last-update").textContent =
-    "Updated " + now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  try {
+    const byTicker = await fetchAll();
+    renderCards(byTicker);
+    renderChart(byTicker);
+    renderSummary(byTicker);
+    const now = new Date();
+    document.getElementById("last-update").textContent =
+      "Updated " + now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  } catch (err) {
+    console.error("Failed to load portfolio data:", err);
+    document.getElementById("portfolio-grid").innerHTML =
+      `<div class="port-skeleton">Error loading data: ${err.message}</div>`;
+    document.getElementById("last-update").textContent = "Update failed";
+  }
 }
 
 document.addEventListener("DOMContentLoaded", loadAll);
