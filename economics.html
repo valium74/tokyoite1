@@ -323,7 +323,7 @@
 
   <!-- Footer note -->
   <div id="data-footer">
-    Sources: <strong>IMF World Economic Outlook</strong> (GDP, CPI) &middot; <strong>S&amp;P Global / HSBC</strong> (PMI) &middot; <strong>Central Banks / Bloomberg</strong> (Policy Rates, 10Y Yields, PPI) &middot; GDP &amp; CPI: 2024 actuals &middot; PMI &amp; rates: Mar 2026 &middot; Real Rate ≈ Policy Rate − CPI
+    Sources: <strong>IMF World Economic Outlook</strong> (GDP, CPI) &middot; <strong>S&amp;P Global / HSBC</strong> (PMI) &middot; <strong>Central Banks</strong> (Policy Rates, Mar 18–20 2026) &middot; <strong>Bloomberg / Trading Economics</strong> (10Y Yields, Mar 20 2026) &middot; GDP &amp; CPI: 2024 actuals &middot; PMI &amp; PPI: Feb/Jan 2026 &middot; Real Rate ≈ Policy Rate − CPI
   </div>
 
 </div><!-- /main -->
@@ -333,18 +333,18 @@
 
 // ── Data ──────────────────────────────────────
 const COUNTRIES = [
-  // gdp/cpi: 2024 actuals · pmi/ppiSvc/pmiComp: Feb 2026 · ppi: Jan 2026 YoY · rate/yield10y: Mar 2026
-  // realRate ≈ policy rate − CPI
-  { code:"USA", name:"United States",  flag:"🇺🇸", gdp: 2.8, cpi: 3.0, pmi: 52.7, ppi:  3.5, rate:  4.50, yield10y:  4.30, realRate:  1.5, pmiSvc: 53.5, pmiComp: 52.7 },
-  { code:"EUQ", name:"Euro Area",      flag:"🇪🇺", gdp: 1.8, cpi: 3.6, pmi: 47.6, ppi:  1.0, rate:  2.75, yield10y:  2.40, realRate: -0.9, pmiSvc: 50.6, pmiComp: 50.2 },
-  { code:"CHN", name:"China",          flag:"🇨🇳", gdp: 5.0, cpi: 0.2, pmi: 50.1, ppi: -2.2, rate:  3.10, yield10y:  1.70, realRate:  2.9, pmiSvc: 51.4, pmiComp: 51.1 },
-  { code:"IND", name:"India",          flag:"🇮🇳", gdp: 6.5, cpi: 4.6, pmi: 56.3, ppi:  3.5, rate:  6.25, yield10y:  6.70, realRate:  1.7, pmiSvc: 59.0, pmiComp: 57.9 },
-  { code:"BRA", name:"Brazil",         flag:"🇧🇷", gdp: 3.4, cpi: 4.4, pmi: 52.1, ppi:  5.0, rate: 13.25, yield10y: 13.50, realRate:  8.9, pmiSvc: 54.4, pmiComp: 53.4 },
-  { code:"GBR", name:"United Kingdom", flag:"🇬🇧", gdp: 1.1, cpi: 2.5, pmi: 46.9, ppi:  0.1, rate:  4.75, yield10y:  4.50, realRate:  2.3, pmiSvc: 51.0, pmiComp: 50.5 },
-  { code:"JPN", name:"Japan",          flag:"🇯🇵", gdp: 0.1, cpi: 2.7, pmi: 48.4, ppi:  4.0, rate:  0.50, yield10y:  1.50, realRate: -2.2, pmiSvc: 53.7, pmiComp: 51.6 },
-  { code:"CAN", name:"Canada",         flag:"🇨🇦", gdp: 1.6, cpi: 2.4, pmi: 48.2, ppi:  1.5, rate:  3.25, yield10y:  3.40, realRate:  0.9, pmiSvc: 46.6, pmiComp: 47.2 },
-  { code:"AUS", name:"Australia",      flag:"🇦🇺", gdp: 1.0, cpi: 3.2, pmi: 50.6, ppi:  1.7, rate:  4.10, yield10y:  4.30, realRate:  0.9, pmiSvc: 51.2, pmiComp: 51.0 },
-  { code:"KOR", name:"South Korea",    flag:"🇰🇷", gdp: 2.0, cpi: 2.3, pmi: 51.0, ppi:  1.2, rate:  3.00, yield10y:  3.00, realRate:  0.7, pmiSvc: 50.1, pmiComp: 50.3 },
+  // gdp/cpi: 2024 actuals · pmi/pmiSvc/pmiComp: Feb 2026 · ppi: Jan 2026 YoY
+  // rate: Mar 2026 official decision · yield10y: Mar 20 2026 · realRate ≈ policy rate − CPI
+  { code:"USA", name:"United States",  flag:"🇺🇸", gdp: 2.8, cpi: 3.0, pmi: 52.7, ppi:  3.5, rate:  3.63, yield10y:  4.39, realRate:  0.6, pmiSvc: 53.5, pmiComp: 52.7 },
+  { code:"EUQ", name:"Euro Area",      flag:"🇪🇺", gdp: 1.8, cpi: 3.6, pmi: 47.6, ppi:  1.0, rate:  2.00, yield10y:  3.05, realRate: -1.6, pmiSvc: 50.6, pmiComp: 50.2 },
+  { code:"CHN", name:"China",          flag:"🇨🇳", gdp: 5.0, cpi: 0.2, pmi: 50.1, ppi: -2.2, rate:  3.00, yield10y:  1.83, realRate:  2.8, pmiSvc: 51.4, pmiComp: 51.1 },
+  { code:"IND", name:"India",          flag:"🇮🇳", gdp: 6.5, cpi: 4.6, pmi: 56.3, ppi:  3.5, rate:  5.25, yield10y:  6.77, realRate:  0.7, pmiSvc: 59.0, pmiComp: 57.9 },
+  { code:"BRA", name:"Brazil",         flag:"🇧🇷", gdp: 3.4, cpi: 4.4, pmi: 52.1, ppi:  5.0, rate: 14.75, yield10y: 14.10, realRate: 10.4, pmiSvc: 54.4, pmiComp: 53.4 },
+  { code:"GBR", name:"United Kingdom", flag:"🇬🇧", gdp: 1.1, cpi: 2.5, pmi: 46.9, ppi:  0.1, rate:  3.75, yield10y:  5.02, realRate:  1.3, pmiSvc: 51.0, pmiComp: 50.5 },
+  { code:"JPN", name:"Japan",          flag:"🇯🇵", gdp: 0.1, cpi: 2.7, pmi: 48.4, ppi:  4.0, rate:  0.75, yield10y:  2.27, realRate: -2.0, pmiSvc: 53.7, pmiComp: 51.6 },
+  { code:"CAN", name:"Canada",         flag:"🇨🇦", gdp: 1.6, cpi: 2.4, pmi: 48.2, ppi:  1.5, rate:  2.25, yield10y:  3.55, realRate: -0.2, pmiSvc: 46.6, pmiComp: 47.2 },
+  { code:"AUS", name:"Australia",      flag:"🇦🇺", gdp: 1.0, cpi: 3.2, pmi: 50.6, ppi:  1.7, rate:  4.10, yield10y:  5.07, realRate:  0.9, pmiSvc: 51.2, pmiComp: 51.0 },
+  { code:"KOR", name:"South Korea",    flag:"🇰🇷", gdp: 2.0, cpi: 2.3, pmi: 51.0, ppi:  1.2, rate:  2.50, yield10y:  3.73, realRate:  0.2, pmiSvc: 50.1, pmiComp: 50.3 },
 ];
 
 const HIST_GDP = {
