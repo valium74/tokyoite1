@@ -305,7 +305,7 @@
   </div>
 
   <div id="footer-note">
-    Data: Yahoo Finance · Prices delayed ~15 min during market hours · For informational purposes only
+    Data: brapi.dev · Prices delayed ~15 min during market hours · For informational purposes only
   </div>
 
 </div>
@@ -328,20 +328,27 @@ const PORTFOLIO = [
   { ticker: "SLCE3",  currency: "R$" },
 ];
 
-async function fetchAll() {
-  const tickers = PORTFOLIO.map(p => p.ticker).join(",");
-  const url = `https://brapi.dev/api/quote/${tickers}?token=${BRAPI_TOKEN}`;
+async function fetchOne(ticker) {
+  const url = `https://brapi.dev/api/quote/${ticker}?token=${BRAPI_TOKEN}`;
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   const json = await resp.json();
+  const r = json.results?.[0];
+  if (!r) return null;
+  const price  = r.regularMarketPrice ?? 0;
+  const prev   = r.regularMarketPreviousClose ?? price;
+  const chgAbs = r.regularMarketChange ?? (price - prev);
+  const chgPct = r.regularMarketChangePercent ?? (prev !== 0 ? (chgAbs / prev) * 100 : 0);
+  return { price, prev, chgAbs, chgPct, name: r.shortName || r.longName || ticker };
+}
+
+async function fetchAll() {
+  const settled = await Promise.allSettled(PORTFOLIO.map(p => fetchOne(p.ticker)));
   const byTicker = {};
-  for (const r of json.results ?? []) {
-    const price  = r.regularMarketPrice ?? 0;
-    const prev   = r.regularMarketPreviousClose ?? price;
-    const chgAbs = r.regularMarketChange ?? (price - prev);
-    const chgPct = r.regularMarketChangePercent ?? (prev !== 0 ? (chgAbs / prev) * 100 : 0);
-    byTicker[r.symbol] = { price, prev, chgAbs, chgPct, name: r.shortName || r.longName || r.symbol };
-  }
+  PORTFOLIO.forEach((p, i) => {
+    const r = settled[i];
+    if (r.status === "fulfilled" && r.value) byTicker[p.ticker] = r.value;
+  });
   return byTicker;
 }
 
