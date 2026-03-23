@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tickers by Exchange – Test</title>
+<script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+<style>
+  :root {
+    --bg: #0e1117;
+    --bg2: #1a1d2e;
+    --bg3: #1e2130;
+    --accent: #29b6f6;
+    --text: #e0e0e0;
+    --text-dim: #8892a4;
+    --border: #2a2d3e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 24px;
+    gap: 24px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  p {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  #status {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .chart-box {
+    width: 100%;
+    max-width: 800px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+  }
+
+  .chart-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Summary cards */
+  #summary {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: 800px;
+  }
+
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 140px;
+  }
+
+  .card-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .card-value {
+    font-family: 'Courier New', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .card-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  #footer {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+</style>
+</head>
+<body>
+
+  <div style="text-align:center; display:flex; flex-direction:column; gap:6px;">
+    <h1>Tickers by Exchange</h1>
+    <p>Data from <code>pol_tickers</code> table · capital0 database</p>
+    <span id="status">Loading…</span>
+  </div>
+
+  <!-- Summary cards -->
+  <div id="summary"></div>
+
+  <!-- Chart -->
+  <div class="chart-box">
+    <div class="chart-title">Number of Tickers per Exchange</div>
+    <div id="chart" style="height:360px;"></div>
+  </div>
+
+  <div id="footer"></div>
+
+<script>
+'use strict';
+
+const API = 'https://1u0aggtmn9.execute-api.us-east-1.amazonaws.com';
+
+const EXCHANGE_NAMES = {
+  WA: 'Warsaw (WA)',
+  IS: 'Istanbul (IS)',
+  BD: 'Budapest (BD)',
+  PR: 'Prague (PR)',
+};
+
+const COLORS = ['#29b6f6', '#00c853', '#f9a825', '#ab47bc', '#ff7043'];
+
+async function load() {
+  try {
+    const resp = await fetch(`${API}/data?table=pol_tickers`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const rows = await resp.json();
+
+    // Count tickers per exchange
+    const counts = {};
+    rows.forEach(r => {
+      counts[r.exchange] = (counts[r.exchange] || 0) + 1;
+    });
+
+    // Sort by count descending
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const exchanges = sorted.map(([ex]) => EXCHANGE_NAMES[ex] || ex);
+    const values    = sorted.map(([, n]) => n);
+    const colors    = sorted.map((_, i) => COLORS[i % COLORS.length]);
+
+    // Render summary cards
+    const summary = document.getElementById('summary');
+    summary.innerHTML = `
+      <div class="card">
+        <div class="card-label">Total Tickers</div>
+        <div class="card-value">${rows.length}</div>
+        <div class="card-sub">across all exchanges</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Exchanges</div>
+        <div class="card-value">${sorted.length}</div>
+        <div class="card-sub">markets covered</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Largest</div>
+        <div class="card-value" style="font-size:20px;padding-top:4px;">${sorted[0][0]}</div>
+        <div class="card-sub">${sorted[0][1]} tickers</div>
+      </div>
+    `;
+
+    // Render chart
+    Plotly.react('chart', [{
+      type: 'bar',
+      x: exchanges,
+      y: values,
+      marker: { color: colors, opacity: 0.88 },
+      text: values.map(v => v.toString()),
+      textposition: 'outside',
+      textfont: { color: '#e0e0e0', size: 13 },
+      hovertemplate: '<b>%{x}</b><br>Tickers: <b>%{y}</b><extra></extra>',
+      cliponaxis: false,
+    }], {
+      paper_bgcolor: 'transparent',
+      plot_bgcolor:  'transparent',
+      font: { family: "'Segoe UI', system-ui, sans-serif", color: '#e0e0e0', size: 12 },
+      margin: { t: 30, r: 20, b: 60, l: 40 },
+      xaxis: {
+        gridcolor: '#2a2d3e',
+        zerolinecolor: '#2a2d3e',
+        tickfont: { color: '#e0e0e0', size: 12 },
+      },
+      yaxis: {
+        gridcolor: '#2a2d3e',
+        zerolinecolor: '#2a2d3e',
+        tickfont: { color: '#8892a4', size: 11 },
+        title: { text: 'Number of Tickers', font: { color: '#8892a4', size: 11 } },
+      },
+    }, { responsive: true, displayModeBar: false });
+
+    // Status + footer
+    const now = new Date();
+    document.getElementById('status').textContent =
+      'Loaded ' + rows.length + ' tickers · ' +
+      now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+    document.getElementById('footer').textContent =
+      'Source: capital0.pol_tickers via AWS Lambda + API Gateway · For testing purposes only';
+
+  } catch (err) {
+    document.getElementById('status').textContent = 'Error: ' + err.message;
+    console.error(err);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', load);
+</script>
+</body>
+</html>
